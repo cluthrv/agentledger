@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentLedger — Visual Audit Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: #020617; color: #e2e8f0; overflow: hidden; height: 100vh; }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes sealGlow { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); } 70% { box-shadow: 0 0 0 12px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+  @keyframes chainPulse { 0% { border-color: #3b82f640; } 50% { border-color: #3b82f6; } 100% { border-color: #3b82f640; } }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0f172a; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+  .header { border-bottom: 1px solid #1e293b; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .header h1 .blue { color: #3b82f6; }
+  .header h1 .sub { color: #64748b; font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .header p { color: #64748b; font-size: 12px; margin-top: 4px; }
+  .header-buttons { display: flex; gap: 8px; }
+
+  .btn-run {
+    background: #1e40af; color: #fff; border: none; border-radius: 8px; padding: 8px 20px;
+    font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.2s;
+  }
+  .btn-run:hover { background: #1d4ed8; }
+  .btn-run:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; }
+  .btn-reset {
+    background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .btn-reset:hover { background: #334155; }
+
+  .layout { display: grid; grid-template-columns: 300px 1fr 300px; height: calc(100vh - 65px); overflow: hidden; }
+
+  .panel-left { border-right: 1px solid #1e293b; padding: 16px; overflow: auto; }
+  .panel-center { overflow: hidden; display: flex; flex-direction: column; }
+  .panel-right { border-left: 1px solid #1e293b; overflow: auto; padding: 16px; }
+
+  .section-title {
+    font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 12px; font-weight: 600;
+  }
+
+  .dealer-card {
+    background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; padding: 10px; margin-bottom: 14px;
+  }
+  .dealer-card .label { font-size: 11px; color: #64748b; margin-bottom: 2px; }
+  .dealer-card .name { font-size: 13px; font-weight: 600; }
+  .dealer-card .meta { font-size: 11px; color: #94a3b8; }
+
+  .step-item {
+    display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px;
+    margin-bottom: 3px; border: 1px solid transparent; transition: all 0.3s; opacity: 0.4;
+  }
+  .step-item.done { opacity: 1; background: #0f172a; }
+  .step-item.active { opacity: 1; }
+  .step-icon {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; flex-shrink: 0; border: 1px solid #334155; background: #1e293b;
+  }
+  .step-item.done .step-icon { border-color: var(--step-border); background: var(--step-badge); }
+  .step-item.active .step-icon { animation: pulse 1s infinite; }
+  .step-label { font-size: 12px; font-weight: 600; color: #64748b; }
+  .step-item.done .step-label { color: var(--step-text); }
+  .step-type { font-size: 10px; color: #64748b; }
+
+  .center-header { padding: 14px 20px 8px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+  .audit-scroll { flex: 1; overflow: auto; padding: 12px 20px; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: #475569; }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #64748b; }
+  .empty-state .desc { font-size: 12px; line-height: 1.6; max-width: 360px; margin: 0 auto; }
+
+  .audit-record {
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;
+    border: 1px solid; border-left-width: 3px; animation: slideIn 0.4s ease;
+  }
+  .audit-record .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .audit-record .top-left { display: flex; align-items: center; gap: 7px; }
+  .audit-record .rec-icon { font-size: 15px; }
+  .audit-record .rec-label { font-weight: 700; font-size: 13px; }
+  .audit-record .rec-badge { font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+  .audit-record .rec-idx { color: #64748b; font-size: 11px; font-family: monospace; }
+  .audit-record .reasoning { color: #cbd5e1; font-size: 12px; line-height: 1.5; margin-bottom: 8px; }
+  .hash-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .hash-badge {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; background: #0f172a;
+    color: #94a3b8; padding: 2px 6px; border-radius: 4px; border: 1px solid #1e293b;
+  }
+  .hash-badge .lbl { color: #64748b; margin-right: 3px; }
+  .chain-ok { margin-top: 4px; display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4ade80; }
+  .chain-start { font-size: 10px; color: #64748b; font-style: italic; }
+
+  .seal-box {
+    animation: slideIn 0.5s ease; margin-top: 14px; background: #052e16;
+    border: 2px solid #22c55e; border-radius: 10px; padding: 16px;
+  }
+  .seal-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .seal-icon {
+    width: 32px; height: 32px; border-radius: 50%; background: #166534;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    animation: sealGlow 2s infinite;
+  }
+  .seal-title { font-weight: 700; color: #4ade80; font-size: 14px; }
+  .seal-sub { font-size: 11px; color: #86efac; }
+  .merkle-root-box {
+    background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px;
+  }
+  .merkle-root-label { font-size: 10px; color: #64748b; margin-bottom: 2px; }
+  .merkle-root-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #e2e8f0; word-break: break-all; }
+  .verify-line { display: flex; align-items: center; gap: 6px; animation: slideIn 0.3s ease; }
+  .verify-line .check { color: #4ade80; font-size: 16px; }
+  .verify-line .text { color: #4ade80; font-size: 12px; font-weight: 600; }
+
+  .info-card { background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; padding: 12px; margin-bottom: 12px; }
+  .info-card .card-title { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+  .info-card .card-body { font-size: 11px; color: #94a3b8; line-height: 1.6; }
+  .info-card .card-body strong { color: #e2e8f0; }
+
+  .chain-viz { margin-top: 8px; padding: 8px; background: #020617; border-radius: 6px; }
+  .chain-node { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+  .chain-node .idx { font-size: 10px; color: #64748b; width: 20px; text-align: right; }
+  .chain-node .hash { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #94a3b8; }
+  .chain-arrow { font-size: 10px; color: #334155; margin-left: auto; }
+  .chain-more { font-size: 10px; color: #475569; text-align: center; margin-top: 4px; }
+
+  .use-case-item { display: flex; gap: 6px; margin-bottom: 2px; font-size: 11px; color: #94a3b8; }
+  .use-case-item .bullet { color: #6366f1; }
+
+  .merkle-tree-viz { text-align: center; padding: 12px 0; }
+  .tree-level { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tree-node {
+    background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+    padding: 3px 7px; min-width: 60px; text-align: center;
+  }
+  .tree-node.root { background: #1e40af; border: 2px solid #3b82f6; border-radius: 10px; padding: 6px 14px; }
+  .tree-node .root-label { color: #93c5fd; font-size: 9px; font-weight: 700; margin-bottom: 1px; }
+  .tree-node .hash { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #94a3b8; }
+  .tree-node.root .hash { font-size: 10px; color: #e2e8f0; }
+  .tree-node .leaf-label { color: #64748b; font-size: 9px; margin-top: 1px; }
+  .tree-connector { width: 1px; height: 12px; background: #334155; margin: 0 auto; }
+
+  .tamper-section { margin-top: 14px; animation: slideIn 0.5s ease; }
+  .tamper-box {
+    background: #1a0a0a; border: 1px solid #dc262640; border-radius: 8px; padding: 12px; margin-top: 8px;
+  }
+  .tamper-btn {
+    background: #7f1d1d; color: #fca5a5; border: 1px solid #dc262660; border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: all 0.2s; width: 100%;
+  }
+  .tamper-btn:hover { background: #991b1b; }
+  .tamper-result { margin-top: 8px; font-size: 11px; line-height: 1.6; }
+  .tamper-result.fail { color: #f87171; }
+  .tamper-result.detect { color: #4ade80; }
+
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+    .panel-left { border-right: none; border-bottom: 1px solid #1e293b; max-height: 200px; }
+    .panel-right { border-left: none; border-top: 1px solid #1e293b; max-height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1><span class="blue">Agent</span>Ledger<span class="sub">Visual Audit Demo</span></h1>
+    <p>Cryptographic audit trail for AI agent operations in B2B Commerce, CRM &amp; CPQ</p>
+  </div>
+  <div class="header-buttons">
+    <button class="btn-run" id="btnRun" onclick="runAgent()">▶ Run Pricing Agent</button>
+    <button class="btn-reset" onclick="resetDemo()">Reset</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Left Panel: Workflow Steps -->
+  <div class="panel-left">
+    <div class="section-title">Agent Workflow — B2B Dealer Pricing</div>
+    <div class="dealer-card">
+      <div class="label">Dealer</div>
+      <div class="name">Midwest Heavy Equipment</div>
+      <div class="meta">Platinum • Midwest • Credit: $500,000</div>
+    </div>
+    <div id="stepsList"></div>
+  </div>
+
+  <!-- Center Panel: Audit Trail -->
+  <div class="panel-center">
+    <div class="center-header">
+      <div class="section-title" style="margin-bottom:0">Cryptographic Audit Trail</div>
+      <span id="recordCount" style="font-size:11px;color:#64748b">0 / 9 records</span>
+    </div>
+    <div class="audit-scroll" id="auditScroll">
+      <div class="empty-state" id="emptyState">
+        <div class="icon">🔒</div>
+        <div class="title">No audit records yet</div>
+        <div class="desc">Click "Run Pricing Agent" to watch an AI agent execute a B2B dealer pricing workflow with every action cryptographically recorded and chained.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Info -->
+  <div class="panel-right">
+    <div class="section-title">How It Works</div>
+
+    <div class="info-card">
+      <div class="card-title" style="color:#93c5fd">🔗 Hash Chain</div>
+      <div class="card-body">
+        Each record's SHA-256 hash includes the previous record's hash. Modify any record → the chain breaks → tampering is instantly detected.
+      </div>
+      <div class="chain-viz" id="chainViz" style="display:none"></div>
+    </div>
+
+    <div class="info-card" id="merkleCard" style="display:none">
+      <div class="card-title" style="color:#93c5fd">🌳 Merkle Tree</div>
+      <div class="card-body" style="margin-bottom:8px">
+        All record hashes form a binary tree. The root hash is a single fingerprint for the entire session. Verify any record in O(log n).
+      </div>
+      <div class="merkle-tree-viz" id="merkleTreeViz"></div>
+    </div>
+
+    <div class="info-card">
+      <div class="card-title" style="color:#fcd34d">💡 Why This Matters</div>
+      <div class="card-body">
+        <p style="margin-bottom:8px"><strong>Without AgentLedger:</strong> "The AI set the price to $150,375." No proof of how or why. Logs can be edited.</p>
+        <p><strong>With AgentLedger:</strong> Cryptographic proof of every step — what the agent queried, what rules it applied, what it calculated — and proof nothing was altered.</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="card-title" style="color:#c084fc">🏢 Enterprise Use Cases</div>
+      <div class="card-body">
+        <div class="use-case-item"><span class="bullet">▸</span> CPQ pricing disputes</div>
+        <div class="use-case-item"><span class="bullet">▸</span> B2B catalog changes</div>
+        <div class="use-case-item"><span class="bullet">▸</span> CRM data governance</div>
+        <div class="use-case-item"><span class="bullet">▸</span> Document generation audit</div>
+        <div class="use-case-item"><span class="bullet">▸</span> Architecture review tracking</div>
+        <div class="use-case-item"><span class="bullet">▸</span> Regulatory compliance</div>
+        <div class="use-case-item"><span class="bullet">▸</span> AI incident forensics</div>
+      </div>
+    </div>
+
+    <div id="tamperDemo" style="display:none">
+      <div class="info-card" style="border-color:#dc262640">
+        <div class="card-title" style="color:#f87171">🔓 Tamper Detection</div>
+        <div class="card-body" style="margin-bottom:8px">
+          Try tampering with a record to see AgentLedger detect it.
+        </div>
+        <button class="tamper-btn" onclick="runTamperDemo()">⚡ Simulate Tampering</button>
+        <div id="tamperResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SHA-256 (browser native) ──
+async function sha256(data) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── Data ──
+const DEALER = { id: 'DEALER-100', name: 'Midwest Heavy Equipment', tier: 'Platinum', region: 'Midwest', creditLimit: 500000 };
+const CATALOG = [
+  { sku: 'HYD-100', name: 'Hydraulic Cylinder 100mm', price: 5200, avail: true },
+  { sku: 'HYD-200', name: 'Hydraulic Pump Assembly', price: 8400, avail: true },
+  { sku: 'HYD-300', name: 'Hydraulic Control Valve', price: 3100, avail: true },
+  { sku: 'HYD-400', name: 'Hydraulic Hose Kit', price: 890, avail: true },
+  { sku: 'HYD-500', name: 'Hydraulic Filter Set', price: 420, avail: false },
+];
+
+const TYPE_COLORS = {
+  QUERY:       { bg: '#1a3a5c', border: '#3b82f6', text: '#93c5fd', badge: '#1e40af' },
+  VALIDATION:  { bg: '#1a3c2a', border: '#22c55e', text: '#86efac', badge: '#166534' },
+  DECISION:    { bg: '#3c2a1a', border: '#f59e0b', text: '#fcd34d', badge: '#92400e' },
+  CALCULATION: { bg: '#2d1a3c', border: '#a855f7', text: '#d8b4fe', badge: '#6b21a8' },
+  CREATE:      { bg: '#1a2f3c', border: '#06b6d4', text: '#67e8f9', badge: '#155e75' },
+};
+
+const STEPS = [
+  { label: 'Dealer Lookup', type: 'QUERY', icon: '🔍',
+    reasoning: 'Retrieved dealer profile. Midwest Heavy Equipment is a Platinum tier dealer in Midwest region.',
+    desc: 'Agent queries CRM for dealer information' },
+  { label: 'Credit Check', type: 'VALIDATION', icon: '🏦',
+    reasoning: 'Credit status: approved. Limit: $500,000. Proceeding with quote generation.',
+    desc: 'Agent validates dealer credit status and limit' },
+  { label: 'Catalog Query', type: 'QUERY', icon: '📦',
+    reasoning: 'Queried CPQ catalog for 5 SKUs. 4 available, 1 unavailable (HYD-500).',
+    desc: 'Agent queries product catalog for requested SKUs' },
+  { label: 'Exclude Unavailable', type: 'DECISION', icon: '⚡',
+    reasoning: 'HYD-500 not available. Excluding from quote per standard policy. Dealer will be notified with restock estimate.',
+    desc: 'Agent decides to exclude unavailable products' },
+  { label: 'Pricing Rules', type: 'QUERY', icon: '📋',
+    reasoning: 'Platinum tier rules: 20% base discount, 5% volume discount above $50,000, max 30% cap.',
+    desc: 'Agent retrieves tier-specific pricing rules from CPQ' },
+  { label: 'Price Calculation', type: 'CALCULATION', icon: '🧮',
+    reasoning: 'Subtotal: $200,500. Tier discount 20% ($40,100) + volume 5% ($10,025) = 25% effective. Final total: $150,375.',
+    desc: 'Agent calculates pricing with all applicable discounts' },
+  { label: 'Floor Price Check', type: 'VALIDATION', icon: '🛡️',
+    reasoning: 'All 4 line items pass floor price validation. No items below minimum margin threshold (60% of base).',
+    desc: 'Agent validates all prices meet minimum margin thresholds' },
+  { label: 'Credit Limit Check', type: 'VALIDATION', icon: '💳',
+    reasoning: 'Order total $150,375 within $500,000 credit limit. Headroom: $349,625. No escalation needed.',
+    desc: 'Agent verifies order total is within dealer credit limit' },
+  { label: 'Generate Quote', type: 'CREATE', icon: '📄',
+    reasoning: 'Generated quote Q-2026-4817 for Midwest Heavy Equipment. 4 line items, $150,375 total. Valid 30 days.',
+    desc: 'Agent creates the final dealer quote in CPQ system' },
+];
+
+let records = [];
+let hashes = [];
+let isRunning = false;
+let merkleRoot = null;
+
+// ── Render Steps (left panel) ──
+function renderSteps(activeIdx) {
+  const container = document.getElementById('stepsList');
+  container.innerHTML = STEPS.map((s, i) => {
+    const done = i <= activeIdx;
+    const active = i === activeIdx && isRunning;
+    const c = TYPE_COLORS[s.type];
+    return `<div class="step-item ${done ? 'done' : ''} ${active ? 'active' : ''}"
+      style="--step-border:${c.border};--step-text:${c.text};--step-badge:${c.badge};
+      ${active ? `background:${c.bg};border-color:${c.border}60` : ''}">
+      <div class="step-icon" style="${done ? `background:${c.badge};border-color:${c.border}` : ''};
+        ${active ? 'animation:pulse 1s infinite' : ''}">${done ? s.icon : (i+1)}</div>
+      <div>
+        <div class="step-label" style="${done ? `color:${c.text}` : ''}">${s.label}</div>
+        <div class="step-type">${s.type}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render Audit Record ──
+function renderRecord(record, index) {
+  const c = TYPE_COLORS[record.type];
+  let html = `<div class="audit-record" style="background:${c.bg};border-color:${c.border}40;border-left-color:${c.border}">
+    <div class="top">
+      <div class="top-left">
+        <span class="rec-icon">${record.icon}</span>
+        <span class="rec-label" style="color:${c.text}">${record.label}</span>
+        <span class="rec-badge" style="background:${c.badge};color:${c.text}">${record.type}</span>
+      </div>
+      <span class="rec-idx">#${index}</span>
+    </div>
+    <div class="reasoning">${record.reasoning}</div>
+    <div class="hash-row">
+      <span class="hash-badge"><span class="lbl">hash</span>${record.hash.substring(0,16)}…</span>`;
+
+  if (record.prevHash) {
+    html += `<span class="hash-badge"><span class="lbl">prev</span>${record.prevHash.substring(0,16)}…</span>`;
+  } else if (index === 0) {
+    html += `<span class="chain-start">← chain start (no previous)</span>`;
+  }
+
+  html += `</div>`;
+
+  if (record.prevHash) {
+    html += `<div class="chain-ok">🔗 Chain verified — prev hash matches record #${index - 1}</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+// ── Update chain visualization ──
+function updateChainViz() {
+  const viz = document.getElementById('chainViz');
+  if (records.length < 2) { viz.style.display = 'none'; return; }
+  viz.style.display = 'block';
+  const show = records.slice(0, 5);
+  viz.innerHTML = show.map((r, i) => `
+    <div class="chain-node">
+      <span class="idx">R${i}</span>
+      <span class="hash">${r.hash.substring(0,14)}…</span>
+      ${i < show.length - 1 ? '<span class="chain-arrow">↓</span>' : ''}
+    </div>
+  `).join('') + (records.length > 5 ? `<div class="chain-more">…${records.length - 5} more</div>` : '');
+}
+
+// ── Merkle Tree Visualization ──
+function renderMerkleTree() {
+  if (hashes.length === 0) return;
+
+  const levels = [];
+  let current = hashes.map((h, i) => ({ hash: h.substring(0, 8), label: `R${i}` }));
+  levels.push([...current]);
+
+  while (current.length > 1) {
+    const next = [];
+    for (let i = 0; i < current.length; i += 2) {
+      const left = current[i];
+      const right = i + 1 < current.length ? current[i + 1] : { ...current[i] };
+      next.push({ hash: (left.hash + right.hash).substring(0, 8), label: '' });
+    }
+    levels.push([...next]);
+    current = next;
+  }
+
+  levels.reverse();
+  const viz = document.getElementById('merkleTreeViz');
+  viz.innerHTML = levels.map((level, li) => `
+    <div class="tree-level">
+      ${level.map(node => `
+        <div>
+          <div class="tree-node ${li === 0 ? 'root' : ''}">
+            ${li === 0 ? '<div class="root-label">MERKLE ROOT</div>' : ''}
+            <div class="hash">${node.hash}…</div>
+            ${li === levels.length - 1 ? `<div class="leaf-label">${node.label}</div>` : ''}
+          </div>
+          ${li < levels.length - 1 ? '<div class="tree-connector"></div>' : ''}
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+// ── Seal Session ──
+function renderSeal() {
+  const scroll = document.getElementById('auditScroll');
+  scroll.innerHTML += `
+    <div class="seal-box">
+      <div class="seal-header">
+        <div class="seal-icon">🔐</div>
+        <div>
+          <div class="seal-title">SESSION SEALED</div>
+          <div class="seal-sub">${records.length} actions recorded and cryptographically sealed</div>
+        </div>
+      </div>
+      <div class="merkle-root-box">
+        <div class="merkle-root-label">MERKLE ROOT</div>
+        <div class="merkle-root-val">${merkleRoot}</div>
+      </div>
+      <div class="verify-line">
+        <span class="check">✓</span>
+        <span class="text">Verification PASSED — hash chain intact, Merkle root verified, ${records.length} records confirmed</span>
+      </div>
+    </div>`;
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+// ── Tamper Demo ──
+async function runTamperDemo() {
+  const result = document.getElementById('tamperResult');
+
+  result.innerHTML = `<div class="tamper-result fail" style="animation:slideIn 0.3s ease;margin-top:8px">
+    ⚠️ <strong>Simulating tampering...</strong><br>
+    Changing record #5 (Price Calculation) output from $150,375 → $50,000
+  </div>`;
+
+  await new Promise(r => setTimeout(r, 1000));
+
+  const tamperedData = JSON.stringify({ idx: 5, tampered: true, output: { total: 50000 }, prev: records[4].hash, ts: 'FAKE' });
+  const tamperedHash = await sha256(tamperedData);
+
+  result.innerHTML += `<div class="tamper-result fail" style="animation:slideIn 0.3s ease;margin-top:6px">
+    ✗ Record #5 hash changed: <span style="font-family:monospace;font-size:10px">${tamperedHash.substring(0,20)}…</span><br>
+    ✗ Record #6 previousHash no longer matches record #5<br>
+    ✗ Chain broken at record #5 → all subsequent records invalid<br>
+    ✗ Merkle root no longer matches sealed value
+  </div>`;
+
+  await new Promise(r => setTimeout(r, 600));
+
+  result.innerHTML += `<div class="tamper-result detect" style="animation:slideIn 0.3s ease;margin-top:8px">
+    🛡️ <strong>TAMPERING DETECTED</strong><br>
+    AgentLedger identified the modification instantly. The cryptographic chain proves the audit trail was altered after sealing. The original sealed Merkle root serves as irrefutable evidence of the authentic record.
+  </div>`;
+}
+
+// ── Main Agent Run ──
+async function runAgent() {
+  if (isRunning) return;
+  isRunning = true;
+  records = [];
+  hashes = [];
+  merkleRoot = null;
+
+  const btn = document.getElementById('btnRun');
+  btn.disabled = true;
+  btn.textContent = '⏳ Running Agent...';
+
+  document.getElementById('emptyState')?.remove();
+  document.getElementById('auditScroll').innerHTML = '';
+  document.getElementById('merkleCard').style.display = 'none';
+  document.getElementById('tamperDemo').style.display = 'none';
+  document.getElementById('tamperResult').innerHTML = '';
+
+  renderSteps(-1);
+
+  for (let i = 0; i < STEPS.length; i++) {
+    await new Promise(r => setTimeout(r, 700));
+
+    const step = STEPS[i];
+    const prevHash = i > 0 ? records[i - 1].hash : null;
+    const hashInput = JSON.stringify({ idx: i, type: step.type, reasoning: step.reasoning, prev: prevHash, ts: Date.now() });
+    const hash = await sha256(hashInput);
+
+    const record = { label: step.label, type: step.type, icon: step.icon, reasoning: step.reasoning, hash, prevHash };
+    records.push(record);
+    hashes.push(hash);
+
+    renderSteps(i);
+    document.getElementById('auditScroll').innerHTML += renderRecord(record, i);
+    document.getElementById('auditScroll').scrollTop = document.getElementById('auditScroll').scrollHeight;
+    document.getElementById('recordCount').textContent = `${i + 1} / ${STEPS.length} records`;
+
+    updateChainViz();
+  }
+
+  // Seal
+  await new Promise(r => setTimeout(r, 500));
+  merkleRoot = await sha256(hashes.join(''));
+  renderSeal();
+  document.getElementById('recordCount').textContent = `${STEPS.length} / ${STEPS.length} records • SEALED`;
+
+  // Show Merkle tree
+  await new Promise(r => setTimeout(r, 400));
+  document.getElementById('merkleCard').style.display = 'block';
+  document.getElementById('merkleCard').style.animation = 'slideIn 0.5s ease';
+  renderMerkleTree();
+
+  // Show tamper demo
+  await new Promise(r => setTimeout(r, 300));
+  document.getElementById('tamperDemo').style.display = 'block';
+  document.getElementById('tamperDemo').style.animation = 'slideIn 0.5s ease';
+
+  isRunning = false;
+  btn.disabled = false;
+  btn.textContent = '▶ Run Pricing Agent';
+
+  renderSteps(STEPS.length - 1);
+}
+
+function resetDemo() {
+  if (isRunning) return;
+  records = [];
+  hashes = [];
+  merkleRoot = null;
+
+  document.getElementById('auditScroll').innerHTML = `
+    <div class="empty-state" id="emptyState">
+      <div class="icon">🔒</div>
+      <div class="title">No audit records yet</div>
+      <div class="desc">Click "Run Pricing Agent" to watch an AI agent execute a B2B dealer pricing workflow with every action cryptographically recorded and chained.</div>
+    </div>`;
+  document.getElementById('recordCount').textContent = '0 / 9 records';
+  document.getElementById('chainViz').style.display = 'none';
+  document.getElementById('merkleCard').style.display = 'none';
+  document.getElementById('tamperDemo').style.display = 'none';
+  document.getElementById('tamperResult').innerHTML = '';
+  renderSteps(-1);
+}
+
+// Init
+renderSteps(-1);
+</script>
+</body>
+</html>
