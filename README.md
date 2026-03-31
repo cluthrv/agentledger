@@ -17,13 +17,13 @@ AgentLedger closes this gap by providing:
 ## Installation
 
 ```bash
-npm install agentledger
+npm install @vluthra/agent-ledger
 ```
 
 ## Quick Start
 
 ```typescript
-import { AgentLedgerSession, ActionType } from 'agentledger';
+import { AgentLedgerSession, ActionType } from '@vluthra/agent-ledger';
 
 // 1. Create an audit session
 const session = new AgentLedgerSession({
@@ -162,7 +162,7 @@ import {
   computeMerkleRoot,
   generateMerkleProof,
   verifyMerkleProof,
-} from 'agentledger';
+} from '@vluthra/agent-ledger';
 ```
 
 ## Use Cases
