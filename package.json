@@ -32,7 +32,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vikasluthra/agentledger"
+    "url": "https://github.com/cluthrv/agentledger"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

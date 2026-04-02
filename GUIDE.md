@@ -208,6 +208,6 @@ Vikas Luthra — Enterprise Solution Architect with 21+ years of experience spec
 
 ## Links
 
-- **GitHub**: [github.com/vikasluthra/agentledger](https://github.com/vikasluthra/agentledger)
+- **GitHub**: [github.com/cluthrv/agentledger](https://github.com/cluthrv/agentledger)
 - **npm**: [npmjs.com/package/@vluthra/agent-ledger](https://www.npmjs.com/package/@vluthra/agent-ledger)
 - **License**: MIT
