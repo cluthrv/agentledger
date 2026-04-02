@@ -1,6 +1,6 @@
 {
   "name": "@vluthra/agent-ledger",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cryptographic audit trails for AI agent operations. Tamper-proof verification using hash chains and Merkle trees.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
