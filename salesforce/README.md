@@ -1,18 +1,28 @@
-# Salesforce DX Project: Next Steps
+# AgentLedger for Salesforce
 
-Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
+Salesforce-native implementation of AgentLedger's cryptographic audit trail framework. Integrates with Agentforce to record every AI agent decision using SHA-256 hash chains and Merkle trees.
 
-## How Do You Plan to Deploy Your Changes?
+## What's Here
 
-Do you want to deploy a set of changes, or create a self-contained application? Choose a [development model](https://developer.salesforce.com/tools/vscode/en/user-guide/development-models).
+- **Custom Objects**: Agent_Audit_Session__c and Agent_Audit_Record__c for storing cryptographic audit trails
+- **Core Apex Classes**: HashChainService, MerkleTreeService, AgentAuditRecorder
+- **Agentforce Actions**: 6 Invocable Actions that wrap business logic with automatic audit recording
+- **Lightning Web Components**: Visual audit trail viewer, demo interfaces, tamper detection
+- **Test Classes**: Full coverage across core framework, Agentforce integration, and UI controllers
 
-## Configure Your Salesforce DX Project
+## Deployment
 
-The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
+```bash
+sf org login web --alias agentledger-dev
+sf project deploy start --source-dir force-app --target-org agentledger-dev
+sf org assign permset --name AgentLedger_Admin --target-org agentledger-dev
+```
 
-## Read All About It
+## Documentation
 
-- [Salesforce Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-- [Salesforce CLI Setup Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_intro.htm)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
+See [GUIDE.md](GUIDE.md) for the complete technical guide covering architecture, every class and method, test procedures, and deployment instructions.
+
+## Related
+
+- [Core TypeScript library](../) (npm: @vluthra/agent-ledger)
+- [Visual HTML demo](../examples/visual-demo.html)
