@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Session_Id__c</fullName>
+    <description>Unique identifier for this audit session (UUID)</description>
+    <externalId>true</externalId>
+    <label>Session ID</label>
+    <length>36</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>

@@ -1,0 +1,340 @@
+<template>
+    <div class="demo-container">
+        <!-- Header -->
+        <div class="demo-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="demo-title"><span class="accent">Agent</span>Ledger</h1>
+                    <span class="demo-scenario">AI Opportunity Qualification Agent</span>
+                </div>
+                <div class="header-right">
+                    <template if:false={isStarted}>
+                        <lightning-button
+                            variant="brand"
+                            label="Run AI Agent"
+                            onclick={handleStart}
+                            icon-name="utility:play"
+                            class="run-btn">
+                        </lightning-button>
+                    </template>
+                    <template if:true={isFinished}>
+                        <lightning-button
+                            variant="neutral"
+                            label="Run Again"
+                            onclick={handleReset}
+                            icon-name="utility:refresh">
+                        </lightning-button>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intro State -->
+        <template if:false={isStarted}>
+            <div class="intro-section">
+                <div class="intro-card">
+                    <lightning-icon icon-name="standard:opportunity" size="large" class="intro-icon"></lightning-icon>
+                    <h2 class="intro-heading">Watch an AI Agent Qualify an Opportunity</h2>
+                    <p class="intro-text">
+                        This demo creates a real Salesforce Opportunity, then runs an AI qualification agent
+                        that evaluates the deal, assesses win probability, advances the stage, and creates
+                        a follow-up task. Every decision the agent makes is recorded in a cryptographic
+                        audit trail using AgentLedger.
+                    </p>
+                    <p class="intro-text">
+                        After the agent completes its work, you can verify the entire audit trail and
+                        generate Merkle proofs for any individual decision.
+                    </p>
+                    <div class="intro-steps">
+                        <div class="intro-step">
+                            <lightning-icon icon-name="utility:search" size="x-small"></lightning-icon>
+                            <span>Look up Opportunity &amp; Account</span>
+                        </div>
+                        <div class="intro-step">
+                            <lightning-icon icon-name="utility:rules" size="x-small"></lightning-icon>
+                            <span>Classify deal &amp; assess probability</span>
+                        </div>
+                        <div class="intro-step">
+                            <lightning-icon icon-name="utility:forward" size="x-small"></lightning-icon>
+                            <span>Advance stage &amp; create follow-up</span>
+                        </div>
+                        <div class="intro-step">
+                            <lightning-icon icon-name="utility:lock" size="x-small"></lightning-icon>
+                            <span>Seal &amp; verify audit trail</span>
+                        </div>
+                    </div>
+                    <lightning-button
+                        variant="brand"
+                        label="Start Demo"
+                        onclick={handleStart}
+                        icon-name="utility:play"
+                        class="start-btn">
+                    </lightning-button>
+                </div>
+            </div>
+        </template>
+
+        <!-- Main Demo Content -->
+        <template if:true={isStarted}>
+            <!-- Context Bar -->
+            <template if:true={setupData}>
+                <div class="context-bar">
+                    <div class="context-item">
+                        <lightning-icon icon-name="standard:account" size="x-small"></lightning-icon>
+                        <span class="context-label">Account:</span>
+                        <span class="context-value">{setupData.accountName}</span>
+                    </div>
+                    <div class="context-item">
+                        <lightning-icon icon-name="standard:opportunity" size="x-small"></lightning-icon>
+                        <span class="context-label">Opportunity:</span>
+                        <span class="context-value">{setupData.opportunityName}</span>
+                    </div>
+                    <div class="context-item">
+                        <span class="context-label">Amount:</span>
+                        <span class="context-value">${setupData.amount}</span>
+                    </div>
+                    <div class="context-item">
+                        <span class="context-label">Stage:</span>
+                        <span class={stageClass}>{currentStage}</span>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Audit Trail -->
+            <div class="trail-section">
+                <div class="trail-header">
+                    <h2 class="trail-title">Cryptographic Audit Trail</h2>
+                    <span class="trail-count">{trailCountLabel}</span>
+                </div>
+
+                <!-- Status Banner -->
+                <template if:true={statusMessage}>
+                    <div class={statusClass}>
+                        <lightning-spinner if:true={isProcessing} alternative-text="Processing" size="small" class="spinner"></lightning-spinner>
+                        <span>{statusMessage}</span>
+                    </div>
+                </template>
+
+                <!-- Records -->
+                <div class="records-container">
+                    <template for:each={auditRecords} for:item="rec">
+                        <div key={rec.sequenceNumber} class={rec.cardClass}>
+                            <div class="card-top">
+                                <div class="card-top-left">
+                                    <lightning-icon icon-name={rec.icon} size="small" class="card-icon"></lightning-icon>
+                                    <div class="card-titles">
+                                        <span class="card-label">{rec.label}</span>
+                                        <span class="card-desc">{rec.description}</span>
+                                    </div>
+                                </div>
+                                <div class="card-top-right">
+                                    <span class={rec.badgeClass}>{rec.actionType}</span>
+                                    <span class="card-seq">#{rec.sequenceNumber}</span>
+                                </div>
+                            </div>
+
+                            <div class="card-reasoning">{rec.reasoning}</div>
+
+                            <div class="card-summary">{rec.displaySummary}</div>
+
+                            <div class="card-crypto">
+                                <div class="hash-pill">
+                                    <span class="pill-label">SHA-256</span>
+                                    <span class="pill-hash">{rec.shortHash}</span>
+                                </div>
+                                <template if:true={rec.previousHash}>
+                                    <div class="chain-link">
+                                        <lightning-icon icon-name="utility:link" size="xx-small" class="link-icon"></lightning-icon>
+                                        <span class="chain-text">Chained to record #{rec.prevIndex}</span>
+                                    </div>
+                                </template>
+                                <template if:false={rec.previousHash}>
+                                    <template if:true={rec.isFirst}>
+                                        <span class="chain-origin">Chain origin</span>
+                                    </template>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Seal & Verify -->
+                <template if:true={isSealed}>
+                    <div class="seal-card">
+                        <div class="seal-top">
+                            <lightning-icon icon-name="utility:lock" size="medium" variant="inverse" class="seal-lock"></lightning-icon>
+                            <div>
+                                <div class="seal-heading">Session Sealed &amp; Verified</div>
+                                <div class="seal-sub">{sealData.recordCount} agent decisions cryptographically sealed</div>
+                            </div>
+                        </div>
+                        <div class="merkle-box">
+                            <div class="merkle-label">MERKLE ROOT</div>
+                            <div class="merkle-hash">{sealData.merkleRoot}</div>
+                        </div>
+
+                        <template if:true={isVerified}>
+                            <div class="verify-results">
+                                <template for:each={verifyChecks} for:item="check">
+                                    <div key={check.name} class="verify-row">
+                                        <lightning-icon
+                                            icon-name={check.iconName}
+                                            size="xx-small"
+                                            variant={check.iconVariant}
+                                            class="verify-row-icon">
+                                        </lightning-icon>
+                                        <span class="verify-name">{check.name}</span>
+                                        <span class="verify-detail">{check.detail}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Proof Section -->
+                        <div class="proof-section">
+                            <div class="proof-heading">Merkle Proof Verification</div>
+                            <p class="proof-explain">Click any record below to cryptographically prove it belongs to this sealed session, without needing access to any other records:</p>
+                            <div class="proof-grid">
+                                <template for:each={auditRecords} for:item="rec">
+                                    <button
+                                        key={rec.sequenceNumber}
+                                        class="proof-tile"
+                                        data-index={rec.sequenceNumber}
+                                        onclick={handleProofClick}>
+                                        <span class="tile-num">#{rec.sequenceNumber}</span>
+                                        <span class="tile-label">{rec.label}</span>
+                                    </button>
+                                </template>
+                            </div>
+                            <template if:true={proofResult}>
+                                <div class={proofResultClass}>
+                                    <div class="proof-detail">
+                                        <span class="proof-field">Record #{proofResult.recordIndex}</span>
+                                        <span class="proof-field">Siblings: {proofResult.siblingCount}</span>
+                                        <span class="proof-field">Hash: {proofShortHash}</span>
+                                    </div>
+                                    <div class="proof-verdict">
+                                        <lightning-icon
+                                            icon-name={proofVerdictIcon}
+                                            size="x-small"
+                                            variant="inverse">
+                                        </lightning-icon>
+                                        <span>{proofVerdictText}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- What This Proves -->
+                <template if:true={isVerified}>
+                    <div class="explanation-card">
+                        <h3 class="explanation-title">What This Proves</h3>
+                        <p class="explanation-text">
+                            The AI agent made 7 decisions about this opportunity. Each decision was recorded
+                            with its complete reasoning, inputs, and outputs. The records are cryptographically
+                            chained so that modifying any single record breaks the chain. The Merkle root
+                            provides a single hash that represents the entire session.
+                        </p>
+                        <p class="explanation-text">
+                            If someone later asks "Why did the AI move this deal to Qualification?" or
+                            "Did someone alter the agent's reasoning after the fact?" this audit trail
+                            provides a tamper-proof, mathematically verifiable answer.
+                        </p>
+                        <template if:true={setupData}>
+                            <div class="opp-link">
+                                <lightning-button
+                                    variant="neutral"
+                                    label="View the Opportunity in Salesforce"
+                                    icon-name="utility:new_window"
+                                    onclick={handleViewOpportunity}>
+                                </lightning-button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Tamper Detection Demo -->
+                <template if:true={isVerified}>
+                    <div class="tamper-card">
+                        <h3 class="tamper-title">Tamper Detection Demo</h3>
+                        <p class="tamper-desc">
+                            What happens if someone modifies the agent's reasoning after the session is sealed?
+                            Click below to simulate tampering with Record #3 (Win Probability Assessment)
+                            by changing the win probability from 72% to 95% and the discount recommendation from 25% to 40%.
+                        </p>
+
+                        <template if:false={tamperResult}>
+                            <lightning-button
+                                variant="destructive"
+                                label="Simulate Tampering"
+                                onclick={handleTamper}
+                                icon-name="utility:warning"
+                                disabled={isTampering}
+                                class="tamper-btn">
+                            </lightning-button>
+                        </template>
+
+                        <template if:true={tamperResult}>
+                            <div class="tamper-detail">
+                                <div class="tamper-section-label">What was changed:</div>
+                                <div class="tamper-change">
+                                    <div class="tamper-before">
+                                        <span class="tamper-label">ORIGINAL (Record #{tamperResult.tamperedRecordIndex}):</span>
+                                        <span class="tamper-text">"...Win probability calculated at 72%...effective discount rate: 25%..."</span>
+                                    </div>
+                                    <div class="tamper-arrow">changed to</div>
+                                    <div class="tamper-after">
+                                        <span class="tamper-label">TAMPERED:</span>
+                                        <span class="tamper-text-bad">"{tamperResult.tamperedReasoning}"</span>
+                                    </div>
+                                </div>
+
+                                <div class="tamper-verdict">
+                                    <lightning-icon icon-name="utility:error" size="small" variant="error" class="tamper-icon"></lightning-icon>
+                                    <div>
+                                        <div class="verdict-title">TAMPERING DETECTED</div>
+                                        <div class="verdict-sub">AgentLedger verification FAILED after modification</div>
+                                    </div>
+                                </div>
+
+                                <div class="tamper-errors">
+                                    <template for:each={tamperResult.errors} for:item="err">
+                                        <div key={err} class="tamper-error-line">
+                                            <lightning-icon icon-name="utility:close" size="xx-small" variant="error"></lightning-icon>
+                                            <span>{err}</span>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <div class="tamper-explanation">
+                                    <p>The SHA-256 hash stored on Record #{tamperResult.tamperedRecordIndex} was computed from the original content.
+                                    When the reasoning was changed, the hash no longer matches. Additionally, because each record's hash
+                                    includes the previous record's hash, the entire chain from the tampered record onward is invalid.
+                                    The Merkle root also no longer matches the sealed value.</p>
+                                </div>
+
+                                <lightning-button
+                                    variant="success"
+                                    label="Restore Original Record"
+                                    onclick={handleRestore}
+                                    icon-name="utility:undo"
+                                    class="restore-btn">
+                                </lightning-button>
+
+                                <template if:true={isRestored}>
+                                    <div class="restore-result">
+                                        <lightning-icon icon-name="utility:success" size="xx-small" variant="success"></lightning-icon>
+                                        <span>Record restored. Verification passes again.</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+            </div>
+        </template>
+    </div>
+</template>

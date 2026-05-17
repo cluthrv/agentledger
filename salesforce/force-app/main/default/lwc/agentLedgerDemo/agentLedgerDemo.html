@@ -1,0 +1,216 @@
+<template>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header-bar">
+            <div class="header-left">
+                <h1 class="app-title"><span class="blue">Agent</span>Ledger</h1>
+                <span class="app-subtitle">Cryptographic Audit Trail for AI Agent Operations</span>
+            </div>
+            <div class="header-right">
+                <lightning-button
+                    variant="brand"
+                    label={runButtonLabel}
+                    onclick={handleRunAgent}
+                    disabled={isRunning}
+                    icon-name="utility:play"
+                    class="slds-m-right_small">
+                </lightning-button>
+                <lightning-button
+                    variant="neutral"
+                    label="Reset"
+                    onclick={handleReset}
+                    disabled={isRunning}
+                    icon-name="utility:refresh">
+                </lightning-button>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <!-- Left Panel: Workflow Steps -->
+            <div class="panel left-panel">
+                <div class="panel-header">Agent Workflow: B2B Dealer Pricing</div>
+
+                <div class="dealer-card">
+                    <div class="dealer-label">Dealer</div>
+                    <div class="dealer-name">Midwest Heavy Equipment</div>
+                    <div class="dealer-meta">Platinum &bull; Midwest &bull; Credit: $500,000</div>
+                </div>
+
+                <template for:each={steps} for:item="step">
+                    <div key={step.number}
+                         class={step.cssClass}>
+                        <div class={step.iconCss}>
+                            <template if:true={step.done}>
+                                <lightning-icon icon-name="utility:check" size="xx-small" variant="inverse"></lightning-icon>
+                            </template>
+                            <template if:false={step.done}>
+                                <span class="step-num">{step.displayNumber}</span>
+                            </template>
+                        </div>
+                        <div class="step-text">
+                            <div class={step.labelCss}>{step.label}</div>
+                            <div class="step-type">{step.actionType}</div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Center Panel: Audit Trail -->
+            <div class="panel center-panel">
+                <div class="panel-header">
+                    <span>Cryptographic Audit Trail</span>
+                    <span class="record-count">{recordCountLabel}</span>
+                </div>
+
+                <div class="audit-scroll" lwc:ref="auditScroll">
+                    <template if:true={showEmptyState}>
+                        <div class="empty-state">
+                            <lightning-icon icon-name="utility:lock" size="large" class="empty-icon"></lightning-icon>
+                            <h2 class="empty-title">No audit records yet</h2>
+                            <p class="empty-desc">Click "Run Pricing Agent" to watch an AI agent execute a B2B dealer pricing workflow with every action cryptographically recorded.</p>
+                        </div>
+                    </template>
+
+                    <template for:each={auditRecords} for:item="rec">
+                        <div key={rec.sequenceNumber} class={rec.cardClass}>
+                            <div class="rec-header">
+                                <div class="rec-header-left">
+                                    <lightning-icon icon-name={rec.icon} size="small" class="rec-icon"></lightning-icon>
+                                    <span class="rec-label">{rec.label}</span>
+                                    <span class={rec.badgeClass}>{rec.actionType}</span>
+                                </div>
+                                <span class="rec-seq">#{rec.sequenceNumber}</span>
+                            </div>
+                            <p class="rec-reasoning">{rec.reasoning}</p>
+                            <div class="hash-row">
+                                <span class="hash-badge">
+                                    <span class="hash-lbl">hash</span>{rec.shortHash}
+                                </span>
+                                <template if:true={rec.previousHash}>
+                                    <span class="hash-badge">
+                                        <span class="hash-lbl">prev</span>{rec.shortPrevHash}
+                                    </span>
+                                </template>
+                                <template if:false={rec.previousHash}>
+                                    <template if:true={rec.isFirst}>
+                                        <span class="chain-start">&larr; chain start</span>
+                                    </template>
+                                </template>
+                            </div>
+                            <template if:true={rec.previousHash}>
+                                <div class="chain-ok">
+                                    <lightning-icon icon-name="utility:link" size="xx-small" class="chain-icon"></lightning-icon>
+                                    <span>Chain verified &mdash; prev hash matches record #{rec.prevIndex}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Seal Box -->
+                    <template if:true={isSealed}>
+                        <div class="seal-box">
+                            <div class="seal-header">
+                                <lightning-icon icon-name="utility:lock" size="medium" variant="inverse" class="seal-icon"></lightning-icon>
+                                <div>
+                                    <div class="seal-title">SESSION SEALED</div>
+                                    <div class="seal-sub">{sealResult.recordCount} actions cryptographically sealed</div>
+                                </div>
+                            </div>
+                            <div class="merkle-root-box">
+                                <div class="merkle-root-label">MERKLE ROOT</div>
+                                <div class="merkle-root-val">{sealResult.merkleRoot}</div>
+                            </div>
+
+                            <template if:true={isVerified}>
+                                <div class="verify-pass">
+                                    <lightning-icon icon-name="utility:success" size="x-small" variant="inverse" class="verify-icon"></lightning-icon>
+                                    <span class="verify-text">Verification PASSED &mdash; {verifyMessage}</span>
+                                </div>
+
+                                <template for:each={verifyChecks} for:item="check">
+                                    <div key={check.name} class="verify-check">
+                                        <template if:true={check.passed}>
+                                            <lightning-icon icon-name="utility:success" size="xx-small" variant="inverse" class="check-icon-pass"></lightning-icon>
+                                        </template>
+                                        <template if:false={check.passed}>
+                                            <lightning-icon icon-name="utility:error" size="xx-small" variant="error" class="check-icon-fail"></lightning-icon>
+                                        </template>
+                                        <span class="check-name">{check.name}:</span>
+                                        <span class="check-detail">{check.detail}</span>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Proof Demo -->
+                    <template if:true={isVerified}>
+                        <div class="proof-box">
+                            <div class="proof-title">Merkle Proof Demo</div>
+                            <p class="proof-desc">Select a record to generate a cryptographic proof that it belongs to this sealed session:</p>
+                            <div class="proof-buttons">
+                                <template for:each={proofButtons} for:item="btn">
+                                    <lightning-button
+                                        key={btn.index}
+                                        label={btn.label}
+                                        variant="neutral"
+                                        onclick={handleProofClick}
+                                        data-index={btn.index}
+                                        class="proof-btn">
+                                    </lightning-button>
+                                </template>
+                            </div>
+                            <template if:true={proofResult}>
+                                <div class="proof-result">
+                                    <div class="proof-line">Record: #{proofResult.recordIndex} | Siblings: {proofResult.siblingCount}</div>
+                                    <div class="proof-line">Hash: {proofShortHash}</div>
+                                    <div class={proofValidClass}>
+                                        <template if:true={proofResult.isValid}>
+                                            <lightning-icon icon-name="utility:success" size="xx-small" variant="inverse"></lightning-icon>
+                                            Proof VALID &mdash; this record is part of the sealed session
+                                        </template>
+                                        <template if:false={proofResult.isValid}>
+                                            <lightning-icon icon-name="utility:error" size="xx-small" variant="error"></lightning-icon>
+                                            Proof INVALID &mdash; tampering detected
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Right Panel: Info -->
+            <div class="panel right-panel">
+                <div class="panel-header">How It Works</div>
+
+                <div class="info-card">
+                    <div class="info-title blue-text">Hash Chain</div>
+                    <p class="info-body">Each record's SHA-256 hash includes the previous record's hash. Modify any record and the chain breaks. Tampering is instantly detected.</p>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-title gold-text">Merkle Tree</div>
+                    <p class="info-body">When the session seals, all hashes form a binary tree. The root hash is a single fingerprint for the entire session. Verify any record in O(log n) without needing all records.</p>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-title green-text">Why This Matters</div>
+                    <p class="info-body"><strong>Without AgentLedger:</strong> "The AI set the price to $150,375." No proof of how or why.</p>
+                    <p class="info-body"><strong>With AgentLedger:</strong> Cryptographic proof of every step the agent took, and proof nothing was altered after the fact.</p>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-title purple-text">Use Cases</div>
+                    <div class="use-case">&#9656; CPQ pricing disputes</div>
+                    <div class="use-case">&#9656; B2B catalog changes</div>
+                    <div class="use-case">&#9656; CRM data governance</div>
+                    <div class="use-case">&#9656; Document generation audit</div>
+                    <div class="use-case">&#9656; Regulatory compliance</div>
+                    <div class="use-case">&#9656; AI incident forensics</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Audit_Session__c</fullName>
+    <description>Parent audit session this record belongs to</description>
+    <label>Audit Session</label>
+    <referenceTo>Agent_Audit_Session__c</referenceTo>
+    <relationshipLabel>Audit Records</relationshipLabel>
+    <relationshipName>Audit_Records</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

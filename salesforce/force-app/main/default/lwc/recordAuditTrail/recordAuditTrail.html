@@ -1,0 +1,91 @@
+<template>
+    <lightning-card title="AgentLedger Audit Trail" icon-name="custom:custom55">
+        <template if:true={isLoading}>
+            <div class="loading-container">
+                <lightning-spinner alternative-text="Loading audit trail" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template if:false={isLoading}>
+            <template if:true={hasNoSessions}>
+                <div class="empty-container">
+                    <p class="empty-text">No AI agent audit sessions found for this record.</p>
+                </div>
+            </template>
+
+            <template if:true={hasSessions}>
+                <template for:each={sessions} for:item="session">
+                    <div key={session.sessionId} class="session-container">
+                        <!-- Session Header -->
+                        <div class="session-header">
+                            <div class="session-info">
+                                <div class="session-title">
+                                    <span class="agent-name">{session.agentId}</span>
+                                    <span class={session.statusClass}>{session.status}</span>
+                                </div>
+                                <div class="session-meta">
+                                    {session.sessionName} &bull; {session.recordCount} actions &bull; {session.startTimeFormatted}
+                                </div>
+                            </div>
+                            <template if:true={session.isSealed}>
+                                <lightning-button
+                                    variant="brand-outline"
+                                    label="Verify"
+                                    onclick={handleVerify}
+                                    data-session-id={session.sessionId}
+                                    icon-name="utility:check"
+                                    class="verify-btn">
+                                </lightning-button>
+                            </template>
+                        </div>
+
+                        <!-- Merkle Root -->
+                        <template if:true={session.merkleRoot}>
+                            <div class="merkle-section">
+                                <span class="merkle-label">Merkle Root:</span>
+                                <span class="merkle-value">{session.merkleRoot}</span>
+                            </div>
+                        </template>
+
+                        <!-- Verification Result -->
+                        <template if:true={session.verifyResult}>
+                            <div class={session.verifyClass}>
+                                <lightning-icon
+                                    icon-name={session.verifyIcon}
+                                    size="xx-small"
+                                    variant={session.verifyVariant}
+                                    class="verify-result-icon">
+                                </lightning-icon>
+                                <span>{session.verifyMessage}</span>
+                            </div>
+                        </template>
+
+                        <!-- Audit Records -->
+                        <div class="records-list">
+                            <template for:each={session.records} for:item="rec">
+                                <div key={rec.sequenceNumber} class="record-row">
+                                    <div class="record-left">
+                                        <span class={rec.typeBadge}>{rec.actionType}</span>
+                                        <span class="record-seq">#{rec.sequenceNumber}</span>
+                                    </div>
+                                    <div class="record-center">
+                                        <div class="record-reasoning">{rec.reasoning}</div>
+                                        <div class="record-hash">
+                                            <span class="hash-text">{rec.shortHash}</span>
+                                            <template if:true={rec.previousHash}>
+                                                <span class="chain-indicator">
+                                                    <lightning-icon icon-name="utility:link" size="xx-small" class="chain-link-icon"></lightning-icon>
+                                                    #{rec.prevIndex}
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </template>
+        </template>
+    </lightning-card>
+</template>

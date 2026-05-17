@@ -5,3 +5,9 @@ coverage/
 .DS_Store
 .sfdx/
 examples/audit-session-output.json
+
+# Salesforce
+salesforce/.sfdx/
+salesforce/.sf/
+salesforce/node_modules/
+cleanup.apex
