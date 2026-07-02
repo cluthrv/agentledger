@@ -4,5 +4,6 @@
     <description>When the agent session started</description>
     <label>Start Time</label>
     <required>true</required>
+    <trackTrending>false</trackTrending>
     <type>DateTime</type>
 </CustomField>

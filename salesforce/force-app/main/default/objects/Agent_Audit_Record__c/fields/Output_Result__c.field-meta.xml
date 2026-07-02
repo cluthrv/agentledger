@@ -4,6 +4,7 @@
     <description>JSON representation of the output/result produced by the agent</description>
     <label>Output Result</label>
     <length>131072</length>
+    <trackTrending>false</trackTrending>
     <type>LongTextArea</type>
     <visibleLines>5</visibleLines>
 </CustomField>

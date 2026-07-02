@@ -127,21 +127,21 @@ private class AgentLedgerTest {
 
     // ── AgentAuditRecorder Integration Tests ──
 
-    @isTest
+   @isTest
     static void testStartSession() {
         Id sessionId = AgentAuditRecorder.startSession(
-            'test-agent', 'unit-test', 'salesforce'
+            'test-agent', '006000000000001', 'salesforce'
         );
 
         Agent_Audit_Session__c session = [
-            SELECT Agent_Id__c, Status__c, Initiator__c, Platform__c
+            SELECT Agent_Id__c, Status__c, Related_Record_Id__c, Platform__c
             FROM Agent_Audit_Session__c
             WHERE Id = :sessionId
         ];
 
         System.assertEquals('test-agent', session.Agent_Id__c);
         System.assertEquals('Active', session.Status__c);
-        System.assertEquals('unit-test', session.Initiator__c);
+        System.assertEquals('006000000000001', session.Related_Record_Id__c);
         System.assertEquals('salesforce', session.Platform__c);
     }
 

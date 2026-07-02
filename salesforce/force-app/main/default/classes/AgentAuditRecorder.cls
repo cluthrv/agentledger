@@ -21,19 +21,19 @@ public with sharing class AgentAuditRecorder {
      * @param platform Platform identifier
      * @return The Salesforce record Id of the new session
      */
-    public static Id startSession(String agentId, String initiator, String platform) {
-        Agent_Audit_Session__c session = new Agent_Audit_Session__c(
-            Session_Id__c = generateUUID(),
-            Agent_Id__c = agentId,
-            Status__c = 'Active',
-            Start_Time__c = DateTime.now(),
-            Initiator__c = initiator,
-            Platform__c = platform,
-            Record_Count__c = 0
-        );
-        insert session;
-        return session.Id;
-    }
+    public static Id startSession(String agentId, String relatedRecordId, String platform) {
+    Agent_Audit_Session__c session = new Agent_Audit_Session__c(
+        Session_Id__c = generateUUID(),
+        Agent_Id__c = agentId,
+        Status__c = 'Active',
+        Start_Time__c = DateTime.now(),
+        Related_Record_Id__c = relatedRecordId,
+        Platform__c = platform,
+        Record_Count__c = 0
+    );
+    insert session;
+    return session.Id;
+}
 
     /**
      * Record an agent action within an existing session.
@@ -124,7 +124,11 @@ public with sharing class AgentAuditRecorder {
      * @return The computed Merkle root hash
      */
     public static String sealSession(Id sessionId) {
-        return MerkleTreeService.sealSession(sessionId);
+            String merkleRoot = MerkleTreeService.sealSession(sessionId);
+
+ 
+
+    return merkleRoot;
     }
 
     /**

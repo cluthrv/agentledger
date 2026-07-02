@@ -2,9 +2,11 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Initiator__c</fullName>
     <description>Who or what initiated this agent session</description>
+    <externalId>false</externalId>
     <label>Initiator</label>
     <length>255</length>
     <required>false</required>
+    <trackTrending>false</trackTrending>
     <type>Text</type>
     <unique>false</unique>
 </CustomField>

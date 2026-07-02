@@ -4,5 +4,6 @@
     <description>When this action was performed by the agent</description>
     <label>Action Timestamp</label>
     <required>true</required>
+    <trackTrending>false</trackTrending>
     <type>DateTime</type>
 </CustomField>

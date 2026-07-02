@@ -4,20 +4,57 @@
     <description>Type of action the agent performed</description>
     <label>Action Type</label>
     <required>true</required>
+    <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
-            <value><fullName>Query</fullName><default>false</default><label>Query</label></value>
-            <value><fullName>Update</fullName><default>false</default><label>Update</label></value>
-            <value><fullName>Create</fullName><default>false</default><label>Create</label></value>
-            <value><fullName>Delete</fullName><default>false</default><label>Delete</label></value>
-            <value><fullName>Decision</fullName><default>false</default><label>Decision</label></value>
-            <value><fullName>Escalation</fullName><default>false</default><label>Escalation</label></value>
-            <value><fullName>Tool_Call</fullName><default>false</default><label>Tool Call</label></value>
-            <value><fullName>Calculation</fullName><default>false</default><label>Calculation</label></value>
-            <value><fullName>Validation</fullName><default>false</default><label>Validation</label></value>
+            <value>
+                <fullName>Query</fullName>
+                <default>false</default>
+                <label>Query</label>
+            </value>
+            <value>
+                <fullName>Update</fullName>
+                <default>false</default>
+                <label>Update</label>
+            </value>
+            <value>
+                <fullName>Create</fullName>
+                <default>false</default>
+                <label>Create</label>
+            </value>
+            <value>
+                <fullName>Delete</fullName>
+                <default>false</default>
+                <label>Delete</label>
+            </value>
+            <value>
+                <fullName>Decision</fullName>
+                <default>false</default>
+                <label>Decision</label>
+            </value>
+            <value>
+                <fullName>Escalation</fullName>
+                <default>false</default>
+                <label>Escalation</label>
+            </value>
+            <value>
+                <fullName>Tool_Call</fullName>
+                <default>false</default>
+                <label>Tool Call</label>
+            </value>
+            <value>
+                <fullName>Calculation</fullName>
+                <default>false</default>
+                <label>Calculation</label>
+            </value>
+            <value>
+                <fullName>Validation</fullName>
+                <default>false</default>
+                <label>Validation</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

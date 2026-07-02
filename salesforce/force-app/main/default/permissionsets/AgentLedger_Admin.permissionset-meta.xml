@@ -1,8 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Full access to AgentLedger audit session and record objects</description>
-    <hasActivationRequired>false</hasActivationRequired>
+    <description>Full access to AgentLedger audit session and record objects, and the Apex needed to
+        run the framework.</description>
     <label>AgentLedger Admin</label>
+    <hasActivationRequired>false</hasActivationRequired>
+
+    <!-- ── Apex Class Access ── -->
+    <classAccesses>
+        <apexClass>AgentAuditRecorder</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HashChainService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>MerkleTreeService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>RecordAuditTrailController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>StartAgentLedgerSessionAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>RecordAgentActionAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>SealAgentLedgerSessionAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>VerifyAgentLedgerSessionAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+
+    <!-- ── Object Permissions ── -->
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>false</allowDelete>
@@ -10,6 +47,7 @@
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
         <object>Agent_Audit_Session__c</object>
+        <viewAllFields>false</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     <objectPermissions>
@@ -19,16 +57,14 @@
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
         <object>Agent_Audit_Record__c</object>
+        <viewAllFields>false</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+
+    <!-- ── Agent_Audit_Session__c Fields ── -->
     <fieldPermissions>
         <editable>true</editable>
-        <field>Agent_Audit_Session__c.Merkle_Root__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Agent_Audit_Session__c.Record_Count__c</field>
+        <field>Agent_Audit_Session__c.End_Time__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -38,14 +74,27 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Agent_Audit_Session__c.Merkle_Root__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Agent_Audit_Session__c.Platform__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Agent_Audit_Session__c.End_Time__c</field>
+        <field>Agent_Audit_Session__c.Record_Count__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Agent_Audit_Session__c.Related_Record_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+
+    <!-- ── Agent_Audit_Record__c Fields ── -->
+
     <fieldPermissions>
         <editable>true</editable>
         <field>Agent_Audit_Record__c.Input_Context__c</field>
@@ -58,12 +107,12 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Agent_Audit_Record__c.Reasoning__c</field>
+        <field>Agent_Audit_Record__c.Previous_Hash__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Agent_Audit_Record__c.Previous_Hash__c</field>
+        <field>Agent_Audit_Record__c.Reasoning__c</field>
         <readable>true</readable>
     </fieldPermissions>
 </PermissionSet>

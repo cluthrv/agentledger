@@ -4,6 +4,7 @@
     <description>The agent reasoning or explanation for this action</description>
     <label>Reasoning</label>
     <length>131072</length>
+    <trackTrending>false</trackTrending>
     <type>LongTextArea</type>
     <visibleLines>3</visibleLines>
 </CustomField>

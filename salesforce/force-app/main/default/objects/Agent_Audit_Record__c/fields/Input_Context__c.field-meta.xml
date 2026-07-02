@@ -4,6 +4,7 @@
     <description>JSON representation of the input/context provided to the agent for this action</description>
     <label>Input Context</label>
     <length>131072</length>
+    <trackTrending>false</trackTrending>
     <type>LongTextArea</type>
     <visibleLines>5</visibleLines>
 </CustomField>

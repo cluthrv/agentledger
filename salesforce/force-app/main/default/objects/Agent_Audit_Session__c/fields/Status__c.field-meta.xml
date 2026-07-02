@@ -4,6 +4,7 @@
     <description>Current lifecycle state of the audit session</description>
     <label>Status</label>
     <required>true</required>
+    <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
