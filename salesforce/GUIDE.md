@@ -2,17 +2,27 @@
 
 ## Overview
 
-AgentLedger is a cryptographic decision-provenance framework for Salesforce AI agents. It records every decision an Agentforce agent makes using SHA-256 hash chains and Merkle trees, producing tamper-evident, independently verifiable audit records stored as native Salesforce data.
+AgentLedger is a cryptographic decision-provenance framework for Salesforce AI agents. It records every decision an Agentforce agent makes using SHA-256 hash chains and Merkle trees, producing durable, tamper-evident, independently verifiable audit records stored as native Salesforce data.
 
 The framework is object-agnostic. The same components work on Opportunity, Case, Quote, Contract, or any custom object. Only configuration changes per use case, never code.
 
+## Observability vs provenance
+
+It is worth being precise about what this framework does and does not do, because Salesforce already provides real agent-monitoring capabilities and AgentLedger is not a replacement for them.
+
+Agentforce provides observability: the Plan Tracer, event logs, and response citations let you watch how an agent interprets a prompt, selects tools, applies reasoning, and produces an output. These are the right tools for building, debugging, and monitoring agents, and you should use them. Observability is operational telemetry for the engineer working with the agent now. It answers whether the agent is functioning, why a run failed, how many steps it took, and what it cost. It is also transient: event logs are retention-limited, and the reasoning they capture, once written, is ordinary mutable data with no proof it has not changed.
+
+AgentLedger provides provenance: a permanent, tamper-evident record of what the agent decided, built to be verified later. It answers the one question observability does not, which is whether the record of a decision can be proven authentic and unaltered since the moment it was made. This is what a compliance officer, auditor, or legal team needs when a past decision is questioned, potentially long after the operational logs have aged out.
+
+The two are complementary. Observability tells you what is happening. Provenance lets you prove, later, what happened.
+
 ## When to use this
 
-Use AgentLedger when an Agentforce agent makes decisions that someone may later need to question, defend, or audit. Typical triggers: the agent changes records without human review at each step, operates in a regulated or compliance-sensitive context, or makes decisions where "why did it do that, and has the record changed since?" is a question you might have to answer.
+Use AgentLedger when an Agentforce agent makes decisions that someone may later need to question, defend, or audit. Typical triggers: the agent changes records without human review at each step, operates in a regulated or compliance-sensitive context, or makes decisions where "what did it decide, why, and has the record changed since?" is a question you might have to answer months or years later.
 
-The distinction that matters: Salesforce event logs record that an agent ran and what it did. They do not produce a tamper-evident record of the agent's reasoning that survives later editing. AI agent decisions are also non-deterministic, so you cannot reproduce a past decision by re-running the agent. AgentLedger preserves the reasoning at the moment it was made and makes any later change to that record cryptographically detectable.
+The reason this matters more for AI than for traditional automation is determinism. A Flow or trigger is deterministic: the same input produces the same output, so the logic itself is the record and you can reproduce any past result by re-running it. AI agents are not deterministic. The same input can produce different reasoning on different runs, and you cannot reproduce a past decision by re-running the agent. The only record of why an agent decided what it did is the reasoning captured at that moment. AgentLedger preserves that reasoning and makes any later change to it cryptographically detectable.
 
----
+A note on the storage question: because AgentLedger stores the reasoning in a Salesforce object, that object is editable like any other. AgentLedger does not prevent editing. It makes editing detectable. Every existing way of recording agent output, a field, a note, an event log, is already editable and cannot detect an edit. AgentLedger replaces those editable, undetectable surfaces with one that is editable but tamper-evident: verification returns Tampered if any sealed record was changed.
 
 ## Architecture
 
