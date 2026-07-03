@@ -2,17 +2,34 @@
 
 Cryptographic decision provenance for Salesforce AI agents.
 
-AgentLedger records every decision an Agentforce agent makes into a tamper-evident audit trail. Each decision is hashed with SHA-256 and chained to the one before it. When a session ends, all records are sealed under a Merkle root. Any modification to any record after sealing is detected on verification.
+## The problem
 
-Salesforce event logs tell you what an agent did. AgentLedger proves the record of *why* it decided has not changed since it ran.
+Agentforce agents now make real business decisions on their own: advancing opportunities, escalating cases, approving discounts, updating records. When one of those decisions is later questioned, you need to be able to answer three things:
 
-## Why this exists
+1. What did the agent actually decide?
+2. Why did it decide that?
+3. Has that record been changed since?
 
-Agentforce agents now make real business decisions autonomously: qualifying opportunities, escalating cases, approving quotes, updating records. Salesforce provides execution telemetry through event logs. What it does not provide is cryptographic proof that the reasoning behind a decision has not been altered after the fact.
+Salesforce event logs tell you the agent ran. They do not preserve a tamper-evident record of the agent's reasoning that survives someone editing it afterward. That is the gap AgentLedger fills.
 
-That gap matters for compliance, audit, and any deployment where autonomous AI decisions carry consequences. AgentLedger fills it at the application layer, storing decision provenance as native Salesforce records on the objects the agents act on.
+Consider a concrete case. An agent approves a 40% discount on a large deal. Three weeks later, finance asks why. You open the record and the reasoning says it was standard policy. But is that what the agent actually concluded, or did someone edit the field afterward? Without a tamper-evident record, you cannot tell. With AgentLedger, verification either confirms the record is exactly what the agent produced, or flags that it was altered after sealing.
+
+## Why AI agents need this when regular automation did not
+
+Traditional Salesforce automation is deterministic. The same input produces the same output, so you can reproduce what happened by re-running it. AI agents are not deterministic. The same opportunity can produce different reasoning on different runs, and you cannot reproduce a past decision by re-running the agent. The only record of why an agent decided what it did is the reasoning it captured at that moment. If that reasoning is stored as ordinary editable text, it is not evidence. AgentLedger makes it evidence.
+
+## Logging, audit, provenance
+
+These three are often confused. They answer different questions.
+
+- **Logging** answers: did it run? Salesforce event logs do this well.
+- **Audit** answers: what did it do, and in what order? Field History and event logs partially do this.
+- **Provenance** answers: can you prove the record of what it decided has not changed since? This requires cryptographic sealing, and it is what AgentLedger provides.
+
+Logs and audit trails can be edited by anyone with the right access, and nothing detects the edit. Provenance makes any change mathematically detectable. AgentLedger is provenance. It complements Salesforce's logging rather than replacing it.
 
 ## How it works
+
 
 ```
 Agentforce Agent
@@ -37,25 +54,46 @@ Each agent run is a **session**. Each decision or action within it is a **record
 | `MerkleTreeService` | Merkle root computation and sealing. |
 | `RecordAuditTrailController` | Read controller for the Lightning Web Component. |
 | `recordAuditTrail` (LWC) | Visual audit trail on any record page, with on-demand Verify. |
-| 4 Invocable Actions | Start, Record, Seal, Verify — for use in any Agentforce agent. |
+| 4 Invocable Actions | Start, Record, Seal, Verify, for use in any Agentforce agent. |
 | `AgentLedger_Admin` | Permission set granting object, field, and Apex access. |
 
 ## The four Invocable Actions
 
 These are what an Agentforce agent calls. They are object-agnostic and require no custom code.
 
-**Start AgentLedger Session** — begins a session linked to a record.
+**Start AgentLedger Session** begins a session linked to a record.
 Inputs: `agentId`, `relatedRecordId`, `platform`. Returns: `sessionId`.
 
-**Record Agent Action** — records one decision or action.
+**Record Agent Action** records one decision or action.
 Inputs: `sessionId`, `agentId`, `actionType`, `inputContext`, `outputResult`, `reasoning`. Returns: `recordHash`, `sequenceNumber`.
 `actionType` is one of: Query, Validation, Decision, Calculation, Create, Update, Escalation, Tool_Call, Delete.
 
-**Seal AgentLedger Session** — seals the session and computes the Merkle root.
+**Seal AgentLedger Session** seals the session and computes the Merkle root.
 Inputs: `sessionId`. Returns: `merkleRoot`.
 
-**Verify AgentLedger Session** — checks integrity of a sealed session.
+**Verify AgentLedger Session** checks integrity of a sealed session.
 Inputs: `sessionId`. Returns: `valid`, `message`.
+
+## Who it's for
+
+Different people ask different questions of an AI agent's decisions. AgentLedger answers all three from the same record.
+
+| Role | Their question | What AgentLedger gives them |
+|---|---|---|
+| Compliance / audit | Can we prove the agent followed policy? | A sealed, verifiable record of every decision and its reasoning |
+| Sales / service manager | Why did the agent do that? | Plain-language reasoning on the record page, per decision |
+| Risk / legal | Has anyone altered the record since? | On-demand verification returning Verified or Tampered |
+
+## Use cases and what's at stake
+
+The framework is object-agnostic, so the pattern applies wherever an agent makes consequential decisions.
+
+| Use case | The agent decides | What's at stake |
+|---|---|---|
+| Opportunity qualification | Whether to advance or hold a deal | Forecast integrity, why a deal was prioritized |
+| Case escalation | Urgency and routing | SLA compliance, why a customer was or wasn't escalated |
+| Quote / discount approval | Whether to approve pricing | Margin, policy adherence, audit defensibility |
+| Contract renewal | Churn risk and renewal strategy | Revenue decisions, why a renewal was flagged |
 
 ## Deployment
 
@@ -88,10 +126,10 @@ That's it. The same four actions and the same component work on any Salesforce o
 
 The framework has been tested end to end, with no code changes between them, on:
 
-- **Opportunity Qualification** — an agent reviews an Opportunity, records its qualification reasoning, and seals the session.
-- **Case Escalation** — an agent reviews a Case, updates it (Priority, Status), and records the update as a tamper-evident action in the chain.
+- **Opportunity Qualification**: an agent reviews an Opportunity, records its qualification reasoning, and seals the session.
+- **Case Escalation**: an agent reviews a Case, updates it (Priority, Status), and records the update as a tamper-evident action in the chain.
 
-The Case example demonstrates that AgentLedger records not just what an agent *read*, but what it *changed* — capturing real data mutations in the audit trail.
+The Case example demonstrates that AgentLedger records not just what an agent *read*, but what it *changed*, capturing real data mutations in the audit trail.
 
 ## Optional: blockchain anchoring
 

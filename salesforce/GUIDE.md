@@ -6,6 +6,12 @@ AgentLedger is a cryptographic decision-provenance framework for Salesforce AI a
 
 The framework is object-agnostic. The same components work on Opportunity, Case, Quote, Contract, or any custom object. Only configuration changes per use case, never code.
 
+## When to use this
+
+Use AgentLedger when an Agentforce agent makes decisions that someone may later need to question, defend, or audit. Typical triggers: the agent changes records without human review at each step, operates in a regulated or compliance-sensitive context, or makes decisions where "why did it do that, and has the record changed since?" is a question you might have to answer.
+
+The distinction that matters: Salesforce event logs record that an agent ran and what it did. They do not produce a tamper-evident record of the agent's reasoning that survives later editing. AI agent decisions are also non-deterministic, so you cannot reproduce a past decision by re-running the agent. AgentLedger preserves the reasoning at the moment it was made and makes any later change to that record cryptographically detectable.
+
 ---
 
 ## Architecture
