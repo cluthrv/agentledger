@@ -1,0 +1,28 @@
+{
+  "required" : [ "agentId", "relatedRecordId" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "agentId" : {
+      "title" : "Agent Id",
+      "description" : "Identifier for the AI agent, e.g. opportunity-qualification-agent",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "platform" : {
+      "title" : "Platform",
+      "description" : "Salesforce",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "relatedRecordId" : {
+      "title" : "Related Record Id",
+      "description" : "The Salesforce record this session relates to, e.g. the Opportunity Id being qualified. Set this to the Opportunity Id the user provided.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

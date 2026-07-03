@@ -1,0 +1,49 @@
+{
+  "required" : [ "actionType", "agentId", "reasoning", "sessionId" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "actionType" : {
+      "title" : "Action Type",
+      "description" : "One of: Query, Validation, Decision, Calculation, Create, Update, Escalation, Tool_Call, Delete. Pick the type that best matches the step.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "agentId" : {
+      "title" : "Agent Id",
+      "description" : "Use the same Agent Id used to start the session.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "inputContext" : {
+      "title" : "Input Context",
+      "description" : "Summarize what the agent evaluated for this step — the inputs, fields, or data considered.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "outputResult" : {
+      "title" : "Output Result",
+      "description" : "State what the agent produced, decided, or returned for this step.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "reasoning" : {
+      "title" : "Reasoning",
+      "description" : "Explain in plain language why the agent took this step. This is shown directly in the audit trail.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "sessionId" : {
+      "title" : "Session Id",
+      "description" : "Use the Session Id returned by Start AgentLedger Session.",
+      "lightning:type" : "lightning__recordIdType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

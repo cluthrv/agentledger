@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiFunction xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Verifies the hash chain and Merkle root of a sealed session. Returns whether the session is intact or tampered. Optional in the standard flow — use only when explicitly confirming integrity.</description>
+    <developerName>Verify_AgentLedger_Session</developerName>
+    <invocationTarget>VerifyAgentLedgerSessionAction</invocationTarget>
+    <invocationTargetType>apex</invocationTargetType>
+    <isConfirmationRequired>false</isConfirmationRequired>
+    <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+    <localDeveloperName>Verify_AgentLedger_Session</localDeveloperName>
+    <masterLabel>Verify AgentLedger Session</masterLabel>
+    <progressIndicatorMessage>Verifying Agent Ledger Session...</progressIndicatorMessage>
+</GenAiFunction>

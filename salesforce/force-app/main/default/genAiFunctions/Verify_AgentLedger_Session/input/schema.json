@@ -1,0 +1,14 @@
+{
+  "required" : [ "sessionId" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "sessionId" : {
+      "title" : "Session Id",
+      "description" : "The session to verify.",
+      "lightning:type" : "lightning__recordIdType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

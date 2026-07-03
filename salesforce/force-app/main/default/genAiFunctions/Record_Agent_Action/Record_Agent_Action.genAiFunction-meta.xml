@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiFunction xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Records a single agent step (Query, Validation, Decision, Calculation, Create, Update, Escalation, Tool_Call, or Delete) in the AgentLedger audit trail. Call once for every meaningful step the agent takes.</description>
+    <developerName>Record_Agent_Action</developerName>
+    <invocationTarget>RecordAgentActionAction</invocationTarget>
+    <invocationTargetType>apex</invocationTargetType>
+    <isConfirmationRequired>false</isConfirmationRequired>
+    <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+    <localDeveloperName>Record_Agent_Action</localDeveloperName>
+    <masterLabel>Record Agent Action</masterLabel>
+    <progressIndicatorMessage>Recording Action Type...</progressIndicatorMessage>
+</GenAiFunction>

@@ -1,0 +1,14 @@
+{
+  "required" : [ "sessionId" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "sessionId" : {
+      "title" : "Session Id",
+      "description" : "Use the same Session Id from Start AgentLedger Session.",
+      "lightning:type" : "lightning__recordIdType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

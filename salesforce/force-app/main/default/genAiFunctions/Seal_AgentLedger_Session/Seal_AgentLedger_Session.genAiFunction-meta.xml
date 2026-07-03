@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiFunction xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Seals the session and computes the Merkle root. Call this LAST, after all decisions and actions are recorded, and before responding to the user. Once sealed, no further actions can be recorded.</description>
+    <developerName>Seal_AgentLedger_Session</developerName>
+    <invocationTarget>SealAgentLedgerSessionAction</invocationTarget>
+    <invocationTargetType>apex</invocationTargetType>
+    <isConfirmationRequired>false</isConfirmationRequired>
+    <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+    <localDeveloperName>Seal_AgentLedger_Session</localDeveloperName>
+    <masterLabel>Seal AgentLedger Session</masterLabel>
+    <progressIndicatorMessage>Sealing the Agent Ledger Session...</progressIndicatorMessage>
+</GenAiFunction>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiFunction xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Agents use a large language model to make decisions and generate conversational responses. The instructions and settings for an agent action tell the LLM how and when to use the action.</description>
+    <developerName>Start_AgentLedger_Session</developerName>
+    <invocationTarget>StartAgentLedgerSessionAction</invocationTarget>
+    <invocationTargetType>apex</invocationTargetType>
+    <isConfirmationRequired>false</isConfirmationRequired>
+    <isIncludeInProgressIndicator>true</isIncludeInProgressIndicator>
+    <localDeveloperName>Start_AgentLedger_Session</localDeveloperName>
+    <masterLabel>Start AgentLedger Session</masterLabel>
+    <progressIndicatorMessage>Starting the Agent Ledger..</progressIndicatorMessage>
+</GenAiFunction>
