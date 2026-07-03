@@ -179,8 +179,8 @@ Sits on any record page. Queries all AgentLedger sessions linked to the record v
 
 The framework ships the Apex and the component. The agent itself is configured through the Setup UI, once per use case.
 
-### 1. Register the actions
-Setup > Agentforce Studio > open the Asset Library > add the four AgentLedger Apex classes as Agent Actions.
+### 1. Confirm the actions are registered
+The four AgentLedger actions ship as GenAiFunction metadata and register automatically on deploy. In Setup > Agentforce Studio > Asset Library, confirm the four actions (Start AgentLedger Session, Record Agent Action, Seal AgentLedger Session, Verify AgentLedger Session) are present. No manual registration is needed.
 
 ### 2. Build the agent and subagent
 Create an Agentforce (Employee) agent. Add a subagent for your use case (for example, Opportunity Qualification). Assign the four AgentLedger actions plus a standard Get Record Details action, and a standard Update Record action if the agent needs to write.
@@ -311,6 +311,17 @@ The Merkle root can be anchored to an external ledger to provide independent, of
 |---|---|
 | Agent_Audit_Session__c/ | Session metadata and Merkle root |
 | Agent_Audit_Record__c/ | Individual action records with hash chains |
+
+### Agent Action Registrations
+
+| Folder | Purpose |
+|---|---|
+| genAiFunctions/Start_AgentLedger_Session/ | Registers the Start action in the Asset Library |
+| genAiFunctions/Record_Agent_Action/ | Registers the Record action |
+| genAiFunctions/Seal_AgentLedger_Session/ | Registers the Seal action |
+| genAiFunctions/Verify_AgentLedger_Session/ | Registers the Verify action |
+
+Each references its Apex class by name and contains no org-specific IDs, so the actions register automatically on deploy.
 
 ### Other Metadata
 

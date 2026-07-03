@@ -192,15 +192,13 @@ sf org assign permset --name AgentLedger_Admin --target-org my-org
 
 ## Setup in Agentforce
 
-Once deployed, wire AgentLedger into any agent in four configuration steps. No code required.
+The four AgentLedger actions are bundled as GenAiFunction metadata, so they register automatically when you deploy. They appear in the Agentforce Asset Library ready to use, with no manual registration. Wiring AgentLedger into an agent is three configuration steps. No code required.
 
-1. **Register the actions.** In Agentforce Studio, open the Asset Library and add the four AgentLedger Apex classes as Agent Actions.
+1. **Assign the actions to your agent's topic or subagent.** In Agentforce Studio, the four AgentLedger actions (Start, Record, Seal, Verify) are already in the Asset Library after deploy. Add them to your subagent, alongside a standard Get Record Details action so the agent can read the record it's working on, and a standard Update Record action if it needs to write.
 
-2. **Assign them to your agent's topic or subagent**, alongside a standard Get Record Details action so the agent can read the record it's working on, and a standard Update Record action if it needs to write.
+2. **Add instructions** telling the agent to start a session first, record each meaningful step, and seal before responding. A full example instruction set is in [GUIDE.md](GUIDE.md).
 
-3. **Add instructions** telling the agent to start a session first, record each meaningful step, and seal before responding. A full example instruction set is in [GUIDE.md](GUIDE.md).
-
-4. **Drop the LWC on the record page** for any object your agents act on.
+3. **Drop the LWC on the record page** for any object your agents act on.
 
 The same four actions and the same component work on any Salesforce object. Only configuration changes per use case.
 
@@ -219,7 +217,8 @@ The Case example demonstrates that AgentLedger records not just what an agent *r
 |---|---|---|
 | Custom Objects | 2 | Agent_Audit_Session__c, Agent_Audit_Record__c |
 | Core Apex Services | 3 | HashChainService, MerkleTreeService, AgentAuditRecorder |
-| Invocable Actions | 4 | Start, Record, Seal, Verify |
+| Invocable Actions | 4 | Start, Record, Seal, Verify (Apex) |
+| Agent Action Registrations | 4 | GenAiFunction metadata, pre-registers the actions in the Asset Library on deploy |
 | Lightning Web Component | 1 | Record page audit trail viewer with Verify |
 | Permission Set | 1 | AgentLedger_Admin |
 | Test Classes | 3 | Core engine, actions, UI controller (50 tests, all classes above 75%) |
