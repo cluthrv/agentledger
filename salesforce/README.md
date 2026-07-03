@@ -2,31 +2,45 @@
 
 Cryptographic decision provenance for Salesforce AI agents.
 
-## The problem
+## What this is
 
-Agentforce agents now make real business decisions on their own: advancing opportunities, escalating cases, approving discounts, updating records. When one of those decisions is later questioned, you need to be able to answer three things:
+AgentLedger records every decision an Agentforce agent makes into a permanent, tamper-evident audit trail. Each decision is hashed with SHA-256 and chained to the one before it. When a session ends, all records are sealed under a Merkle root. Any change to any record after sealing is detectable on verification.
 
-1. What did the agent actually decide?
-2. Why did it decide that?
-3. Has that record been changed since?
+It is an evidentiary layer, not a monitoring tool. It sits above Salesforce's observability, not in place of it.
 
-Salesforce event logs tell you the agent ran. They do not preserve a tamper-evident record of the agent's reasoning that survives someone editing it afterward. That is the gap AgentLedger fills.
+## What Salesforce already gives you, and what it doesn't
 
-Consider a concrete case. An agent approves a 40% discount on a large deal. Three weeks later, finance asks why. You open the record and the reasoning says it was standard policy. But is that what the agent actually concluded, or did someone edit the field afterward? Without a tamper-evident record, you cannot tell. With AgentLedger, verification either confirms the record is exactly what the agent produced, or flags that it was altered after sealing.
+Salesforce already lets you see how an agent reasons. Agentforce provides a Plan Tracer, event logs, and response citations. You can watch an agent interpret a prompt, select tools, apply reasoning, and produce an output. For building, debugging, and monitoring agents, these tools are good and you should use them.
 
-## Why AI agents need this when regular automation did not
+But observability and provenance are different things, and they serve different people at different times.
 
-Traditional Salesforce automation is deterministic. The same input produces the same output, so you can reproduce what happened by re-running it. AI agents are not deterministic. The same opportunity can produce different reasoning on different runs, and you cannot reproduce a past decision by re-running the agent. The only record of why an agent decided what it did is the reasoning it captured at that moment. If that reasoning is stored as ordinary editable text, it is not evidence. AgentLedger makes it evidence.
+Observability is for the engineer watching the agent now. It answers: is the agent working, why did this run fail, how many steps did it take, what did it cost. It is operational telemetry. It is also transient. Event logs are retention-limited, they are meant for performance analysis, and the reasoning they capture, once written, is ordinary mutable data with no proof it hasn't changed.
 
-## Logging, audit, provenance
+Provenance is for the compliance officer, auditor, or lawyer who needs to establish, later, what an agent decided and prove that record is authentic. It answers one question observability does not: can you prove the record of what the agent decided has not been altered since the moment it was made.
 
-These three are often confused. They answer different questions.
+That is the gap AgentLedger fills. Not "Salesforce can't show you agent reasoning," it can. The gap is that nothing native makes that reasoning a durable, tamper-evident, independently verifiable record.
 
-- **Logging** answers: did it run? Salesforce event logs do this well.
-- **Audit** answers: what did it do, and in what order? Field History and event logs partially do this.
-- **Provenance** answers: can you prove the record of what it decided has not changed since? This requires cryptographic sealing, and it is what AgentLedger provides.
+## Why this matters more for AI than for regular automation
 
-Logs and audit trails can be edited by anyone with the right access, and nothing detects the edit. Provenance makes any change mathematically detectable. AgentLedger is provenance. It complements Salesforce's logging rather than replacing it.
+Traditional Salesforce automation is deterministic. The same input produces the same output, so if you ever need to know what a Flow did, you can re-run it and reproduce the result. The logic is the record.
+
+AI agents are not deterministic. The same opportunity can produce different reasoning on different runs. You cannot reproduce a past decision by re-running the agent. The only record of why an agent decided what it did is the reasoning it captured at that moment. If that reasoning is stored as ordinary editable text, it is not evidence. It is a claim. AgentLedger turns it into evidence.
+
+## A concrete case
+
+An agent approves a 40% discount on a large deal at 2am. Three weeks later, finance asks why. You open the record and the reasoning says the discount met standard policy.
+
+But is that what the agent actually concluded, or did someone edit the field afterward to make a mistake look routine? The event logs may have aged out. The reasoning field is editable, and an edited field looks identical to an original one.
+
+With AgentLedger, you run Verify. It recomputes the cryptographic hash of the record and compares it to the value sealed at decision time. Either it confirms the record is exactly what the agent produced, or it returns Tampered. That is the difference between a claim and proof.
+
+## Doesn't storing the reasoning create the tampering risk?
+
+A fair objection: if AgentLedger stores the reasoning in a Salesforce object, and that object is editable, hasn't AgentLedger introduced the very problem it claims to solve?
+
+No. The reasoning has to be stored somewhere for it to have any value at all. Every existing way teams record agent output today, a field, a note, a Chatter post, an event log, is editable, and none of them can detect an edit. Editability is inherent to storing data in any CRM. AgentLedger does not add an editable surface that wasn't there. It replaces several editable, undetectable surfaces with one editable but tamper-evident one.
+
+Like a tamper-evident seal on a medicine bottle, it does not prevent the bottle from being opened. It makes opening it obvious. The record can still be edited by anyone with access. The difference is that after AgentLedger, the edit is detectable: verification returns Tampered instead of Verified. Forging one field is trivial. Forging the entire hash chain and Merkle root consistently is the hard problem cryptographic sealing creates.
 
 ## How it works
 
