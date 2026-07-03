@@ -2,9 +2,7 @@
 
 Cryptographic decision provenance for Salesforce AI agents.
 
-## What this is
-
-AgentLedger records every decision an Agentforce agent makes into a permanent, tamper-evident audit trail. Each decision is hashed with SHA-256 and chained to the one before it. When a session ends, all records are sealed under a Merkle root. Any change to any record after sealing is detectable on verification.
+AgentLedger records every decision an Agentforce agent makes into a permanent, tamper-evident audit trail. Each decision is hashed with SHA-256 and chained to the one before it. When a session ends, all records are sealed under a Merkle root. If any record is modified after sealing, verification fails and the change becomes cryptographically detectable.
 
 It is an evidentiary layer, not a monitoring tool. It sits above Salesforce's observability, not in place of it.
 
@@ -44,7 +42,6 @@ Like a tamper-evident seal on a medicine bottle, it does not prevent the bottle 
 
 ## How it works
 
-
 ```
 Agentforce Agent
   Start Session       -> Agent_Audit_Session__c (Status: Active)
@@ -57,19 +54,20 @@ Agentforce Agent
 
 Each agent run is a **session**. Each decision or action within it is a **record**. Records are linked in a hash chain: record 2 references record 1's hash, record 3 references record 2's, and so on. Sealing computes a single Merkle root that fingerprints the entire session. Verification recomputes everything and compares. Any change to any field of any record breaks the chain and is caught.
 
-## What's in the package
+## What gets recorded
 
-| Component | Purpose |
-|---|---|
-| `Agent_Audit_Session__c` | One record per agent run. Holds status, Merkle root, related record link. |
-| `Agent_Audit_Record__c` | One record per decision or action. Holds input, output, reasoning, and hashes. |
-| `AgentAuditRecorder` | Core service: startSession, recordAction, sealSession, verifySession. |
-| `HashChainService` | SHA-256 hashing and hash-chain verification. |
-| `MerkleTreeService` | Merkle root computation and sealing. |
-| `RecordAuditTrailController` | Read controller for the Lightning Web Component. |
-| `recordAuditTrail` (LWC) | Visual audit trail on any record page, with on-demand Verify. |
-| 4 Invocable Actions | Start, Record, Seal, Verify, for use in any Agentforce agent. |
-| `AgentLedger_Admin` | Permission set granting object, field, and Apex access. |
+For each agent action, AgentLedger stores:
+
+- **Action Type**: Query, Validation, Decision, Calculation, Create, Update, Escalation, Tool_Call, or Delete
+- **Input Context**: what data the agent looked at
+- **Output Result**: what the agent produced or decided
+- **Reasoning**: why the agent took this action, in plain language
+- **Record Hash**: SHA-256 hash of the record's content
+- **Previous Hash**: hash of the prior record, forming the chain
+- **Timestamp**: when the action occurred
+- **Sequence Number**: position in the chain
+
+No business data leaves Salesforce. Everything is stored in two custom objects within your org.
 
 ## The four Invocable Actions
 
@@ -88,26 +86,96 @@ Inputs: `sessionId`. Returns: `merkleRoot`.
 **Verify AgentLedger Session** checks integrity of a sealed session.
 Inputs: `sessionId`. Returns: `valid`, `message`.
 
-## Who it's for
+## Verification
 
-Different people ask different questions of an AI agent's decisions. AgentLedger answers all three from the same record.
+Click the **Verify** button on any record page to run three integrity checks:
 
-| Role | Their question | What AgentLedger gives them |
-|---|---|---|
-| Compliance / audit | Can we prove the agent followed policy? | A sealed, verifiable record of every decision and its reasoning |
-| Sales / service manager | Why did the agent do that? | Plain-language reasoning on the record page, per decision |
-| Risk / legal | Has anyone altered the record since? | On-demand verification returning Verified or Tampered |
+1. **Hash chain integrity**: recomputes every record's hash from its current content. If any field was modified after creation, the computed hash won't match the stored hash.
+2. **Merkle root integrity**: recomputes the Merkle root from all record hashes. If any record was added, removed, or modified, the root won't match.
+3. **Record count**: confirms the number of records matches the session's recorded count.
 
-## Use cases and what's at stake
+If all three pass, the audit trail is intact. If any check fails, the specific tampered record is identified.
 
-The framework is object-agnostic, so the pattern applies wherever an agent makes consequential decisions.
+## Use cases
 
-| Use case | The agent decides | What's at stake |
-|---|---|---|
-| Opportunity qualification | Whether to advance or hold a deal | Forecast integrity, why a deal was prioritized |
-| Case escalation | Urgency and routing | SLA compliance, why a customer was or wasn't escalated |
-| Quote / discount approval | Whether to approve pricing | Margin, policy adherence, audit defensibility |
-| Contract renewal | Churn risk and renewal strategy | Revenue decisions, why a renewal was flagged |
+The framework is object-agnostic. The same components apply wherever an agent makes consequential decisions.
+
+### Opportunity Qualification
+
+An agent evaluates opportunities by querying account data, calculating win probability from deal size and customer history, advancing the stage when criteria are met, and creating follow-up tasks. AgentLedger records every evaluation factor, the probability calculation, and the stage-advancement decision.
+
+When the sales VP asks why the AI advanced a deal, the audit trail shows exactly what data the agent considered, what probability it calculated, and what criteria triggered the change. The cryptographic chain proves nobody altered that reasoning afterward.
+
+### Case Escalation
+
+An agent monitors incoming cases, checks SLA thresholds, evaluates account tier and case severity, and escalates when criteria are met. AgentLedger records the SLA calculation, the escalation decision, and the priority change.
+
+When a customer disputes an escalation path or an SLA breach occurs, the tamper-evident trail proves what the agent evaluated and when, and proves the records weren't modified after the incident.
+
+### CPQ Pricing
+
+An agent retrieves dealer pricing rules, applies tier-specific discounts, validates floor prices, checks credit limits, and generates quotes. AgentLedger records every pricing calculation, discount application, and validation check.
+
+When a pricing dispute arises or an audit reveals an unusual discount, the trail shows exactly what rules the agent applied and what calculations produced the final price. The hash chain proves the pricing rationale wasn't changed retroactively.
+
+### Contract Review
+
+An agent analyzes contract documents, extracts key terms (renewal dates, liability caps, termination clauses), flags non-standard language, and routes for review. AgentLedger records what was extracted, what was flagged, and why it was routed to a specific reviewer.
+
+When a contract dispute surfaces months later, the trail shows what the agent identified at review time, proving the analysis wasn't altered after execution.
+
+### Compliance Screening
+
+An agent performs KYC/AML checks on new accounts, evaluates risk scores, flags suspicious patterns, and determines required verification levels. AgentLedger records every screening factor, risk calculation, and verification decision.
+
+When regulators audit the screening process, the tamper-evident trail proves what data the agent evaluated, what score it calculated, and that the records are intact since the original assessment.
+
+### Order Approval
+
+An agent reviews purchase orders against inventory, validates shipping constraints, checks payment terms, and routes for approval based on order value and customer tier. AgentLedger records each validation step, the routing decision, and any exceptions granted.
+
+When a fulfillment issue or billing dispute requires investigation, the trail provides a complete, verifiable record of every check the agent performed before approving the order.
+
+## Integration patterns
+
+### No-code (any admin can set up)
+
+Add the four AgentLedger actions to any Agentforce subagent, then instruct the agent to start a session, record each action it takes with its type, inputs, outputs, and reasoning, and seal the session before responding. No Apex required. Works with any agent workflow.
+
+### Apex wrapper (for developers who want deeper control)
+
+Call `AgentAuditRecorder` directly from your own Apex to control the structure of what gets recorded:
+
+```apex
+Id sessionId = AgentAuditRecorder.startSession(
+    'my-custom-agent', opportunityId, 'salesforce');
+
+AgentAuditRecorder.recordAction(
+    sessionId,
+    'my-custom-agent',
+    'Decision',
+    JSON.serialize(inputData),
+    JSON.serialize(outputData),
+    'Escalated because the SLA breach is within 2 hours and the account is Enterprise tier.'
+);
+
+String merkleRoot = AgentAuditRecorder.sealSession(sessionId);
+```
+
+### Flow integration
+
+The Invocable Actions are callable from Salesforce Flows. Use them in Screen Flows, Record-Triggered Flows, or Autolaunched Flows to add cryptographic auditing to any automated process, not just Agentforce agents.
+
+## Record page component
+
+The **AgentLedger Audit Trail** Lightning Web Component (`recordAuditTrail`) sits on any record page and displays all audit sessions linked to that record. Add it via Lightning App Builder:
+
+1. Open any record (Opportunity, Case, Account, or any object)
+2. Click the gear icon, then Edit Page
+3. Drag "AgentLedger Audit Trail" from the Custom components onto the page
+4. Save and activate
+
+The component shows the agent name, session identifier, Merkle root, verification status, and every recorded action with its type, reasoning, hash, and chain link. Click **Verify** to re-run integrity verification on demand.
 
 ## Deployment
 
@@ -126,15 +194,15 @@ sf org assign permset --name AgentLedger_Admin --target-org my-org
 
 Once deployed, wire AgentLedger into any agent in four configuration steps. No code required.
 
-1. **Register the actions.** In Agentforce Studio, open the Asset Library and add the four AgentLedger Apex classes as Agent Actions (Start, Record, Seal, Verify).
+1. **Register the actions.** In Agentforce Studio, open the Asset Library and add the four AgentLedger Apex classes as Agent Actions.
 
-2. **Assign them to your agent's topic or subagent**, alongside a standard Get Record Details action so the agent can read the record it's working on.
+2. **Assign them to your agent's topic or subagent**, alongside a standard Get Record Details action so the agent can read the record it's working on, and a standard Update Record action if it needs to write.
 
-3. **Add instructions** telling the agent to start a session first, record each meaningful step, and seal before responding. An example instruction set is in [GUIDE.md](GUIDE.md).
+3. **Add instructions** telling the agent to start a session first, record each meaningful step, and seal before responding. A full example instruction set is in [GUIDE.md](GUIDE.md).
 
-4. **Drop the LWC on the record page.** In Lightning App Builder, add the `recordAuditTrail` component to the record page of any object your agents act on (Opportunity, Case, Quote, and so on).
+4. **Drop the LWC on the record page** for any object your agents act on.
 
-That's it. The same four actions and the same component work on any Salesforce object. Only configuration changes per use case.
+The same four actions and the same component work on any Salesforce object. Only configuration changes per use case.
 
 ## Proven use cases
 
@@ -145,28 +213,30 @@ The framework has been tested end to end, with no code changes between them, on:
 
 The Case example demonstrates that AgentLedger records not just what an agent *read*, but what it *changed*, capturing real data mutations in the audit trail.
 
+## Package contents
+
+| Component | Count | Description |
+|---|---|---|
+| Custom Objects | 2 | Agent_Audit_Session__c, Agent_Audit_Record__c |
+| Core Apex Services | 3 | HashChainService, MerkleTreeService, AgentAuditRecorder |
+| Invocable Actions | 4 | Start, Record, Seal, Verify |
+| Lightning Web Component | 1 | Record page audit trail viewer with Verify |
+| Permission Set | 1 | AgentLedger_Admin |
+| Test Classes | 3 | Core engine, actions, UI controller (50 tests, all classes above 75%) |
+
 ## Optional: blockchain anchoring
 
-AgentLedger's Merkle root can optionally be anchored to an external ledger to provide independent, off-platform proof that a session existed at a point in time. This moves the guarantee from tamper-evidence to non-repudiation.
+For maximum assurance, AgentLedger's Merkle root can be anchored to an external ledger (such as Ethereum or Arbitrum) after sealing. Only the 64-character root hash is stored externally. No business data, no customer information, and no agent reasoning touches the external ledger.
 
-This is an optional extension and is **not included** in this package to keep the core framework dependency-free. A reference implementation anchors the Merkle root to an EVM chain after sealing:
+External anchoring allows independent verification that a sealed session existed at a specific point in time and that its Merkle root has not changed, moving the guarantee from tamper-evidence to non-repudiation.
 
-```apex
-public static String sealSession(Id sessionId) {
-    String merkleRoot = MerkleTreeService.sealSession(sessionId);
-    // Optional: anchor merkleRoot to an external ledger
-    // BlockchainAnchorService.anchorSessionAsync(sessionId);
-    return merkleRoot;
-}
-```
-
-To enable it, add fields to `Agent_Audit_Session__c` for the transaction hash, network, and anchor status, and implement an async callout to your anchoring endpoint. Contact the author for the reference anchoring service.
+This is an optional extension and is not included in this package, to keep the core framework dependency-free. Contact the author for the reference anchoring service.
 
 ## Architecture notes
 
 **Canonical hash input (locked).** Each record hash is computed from a fixed, ordered set of fields. This order must never change after deployment, or previously sealed sessions would fail verification.
 
-**Immutable records.** Audit records are created once and never updated by the framework. The permission set grants create and read but not delete on the objects.
+**Immutable by convention.** Audit records are created once and never updated by the framework. The permission set grants create and read but not delete on the objects.
 
 **Native storage.** Everything lives in standard Salesforce custom objects. No external dependencies, no managed package required. Deploy the source and go.
 
@@ -177,7 +247,12 @@ See [GUIDE.md](GUIDE.md) for the full technical guide: architecture, every class
 ## Related
 
 - Core TypeScript library: `@vluthra/agent-ledger` on npm
-- Repository root for the cross-platform framework
+
+## Author
+
+Vikas Luthra, architect and open source contributor.
+LinkedIn: linkedin.com/in/vikas-luthra-crm
+GitHub: github.com/cluthrv
 
 ## License
 
