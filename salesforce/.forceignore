@@ -1,0 +1,3 @@
+# Exclude Agentforce action registrations from the core package.
+# The core package installs in any org, with or without Agentforce.
+**/genAiFunctions/**

@@ -1,12 +1,39 @@
 {
   "packageDirectories": [
     {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
       "path": "force-app",
-      "default": true
+      "default": true,
+      "package": "AgentLedger",
+      "versionDescription": ""
+    },
+    {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
+      "path": "force-app",
+      "default": false,
+      "package": "AgentLedger Core",
+      "versionDescription": "Cryptographic decision provenance for Salesforce AI agents. Core framework: audit objects, hash-chain and Merkle services, recorder API, and the record-page audit trail component. Installs in any org."
+    },
+    {
+      "versionName": "ver 0.1",
+      "versionNumber": "0.1.0.NEXT",
+      "path": "force-app",
+      "default": false,
+      "package": "AgentLedger for Agentforce",
+      "versionDescription": "Cryptographic decision provenance for Salesforce AI agents, with Agentforce actions pre-registered. Requires Agentforce enabled. Includes the four AgentLedger agent actions ready to assign."
     }
   ],
   "name": "agentledger-sfdc",
   "namespace": "",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "61.0"
+  "sourceApiVersion": "61.0",
+  "packageAliases": {
+    "AgentLedger": "0HogK0000003AndSAE",
+    "AgentLedger Core": "0HogK0000003BN7SAM",
+    "AgentLedger Core@0.1.0-1": "04tgK000000E6rxQAC",
+    "AgentLedger Core@0.1.0-2": "04tgK000000E6tZQAS",
+    "AgentLedger for Agentforce": "0HogK0000003GD7SAM"
+  }
 }

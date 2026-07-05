@@ -11,7 +11,10 @@
     color: #64748b;
     font-size: 13px;
 }
-
+.merkle-help {
+    margin-left: 4px;
+    vertical-align: middle;
+}
 .session-container {
     border-bottom: 1px solid #e5e7eb;
     padding: 16px;

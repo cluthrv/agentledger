@@ -39,10 +39,16 @@
                             </template>
                         </div>
 
-                        <!-- Merkle Root -->
+                        <!-- Verification Fingerprint (Merkle Root) -->
                         <template if:true={session.merkleRoot}>
                             <div class="merkle-section">
-                                <span class="merkle-label">Merkle Root:</span>
+                                <span class="merkle-label">
+                                    Verification Fingerprint
+                                    <lightning-helptext
+                                        content="Cryptographic Merkle root that fingerprints the entire session. Click Verify to confirm the audit trail is unaltered."
+                                        class="merkle-help">
+                                    </lightning-helptext>
+                                </span>
                                 <span class="merkle-value">{session.merkleRoot}</span>
                             </div>
                         </template>
