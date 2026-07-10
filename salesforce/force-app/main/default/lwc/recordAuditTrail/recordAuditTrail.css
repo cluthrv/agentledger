@@ -11,6 +11,10 @@
     color: #64748b;
     font-size: 13px;
 }
+.status-tampered {
+    background-color: #fdecea;
+    color: #ba0517;
+}
 .merkle-help {
     margin-left: 4px;
     vertical-align: middle;

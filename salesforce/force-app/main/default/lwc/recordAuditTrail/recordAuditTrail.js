@@ -25,7 +25,7 @@ export default class RecordAuditTrail extends LightningElement {
         if (data) {
             this.sessions = data.map(session => ({
                 ...session,
-                isSealed: session.status === 'Sealed' || session.status === 'Verified',
+                isSealed: session.status === 'Sealed' || session.status === 'Verified' || session.status === 'Tampered',
                 statusClass: session.status === 'Verified' ? 'status-pill status-verified' :
                              session.status === 'Sealed' ? 'status-pill status-sealed' :
                              'status-pill status-active',
@@ -60,10 +60,19 @@ export default class RecordAuditTrail extends LightningElement {
         const sessionId = event.target.dataset.sessionId;
         try {
             const result = await verifySessionFromRecord({ sessionId });
+            // The Apex verify updates the session Status to Verified or Tampered.
+            // Reflect that new status in the UI immediately, and keep the
+            // Verify button available so a fixed session can be re-verified.
+            const newStatus = result.valid ? 'Verified' : 'Tampered';
             this.sessions = this.sessions.map(s => {
                 if (s.sessionId === sessionId) {
                     return {
                         ...s,
+                        status: newStatus,
+                        isSealed: true,
+                        statusClass: result.valid
+                            ? 'status-pill status-verified'
+                            : 'status-pill status-tampered',
                         verifyResult: result,
                         verifyClass: result.valid ? 'verify-result verify-pass' : 'verify-result verify-fail',
                         verifyIcon: result.valid ? 'utility:success' : 'utility:error',

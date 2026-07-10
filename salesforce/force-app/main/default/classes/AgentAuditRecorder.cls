@@ -212,12 +212,16 @@ public with sharing class AgentAuditRecorder {
             ? 'Session verified successfully. ' + records.size() + ' records, chain intact.'
             : 'Session verification FAILED. See checks for details.';
 
-        // Update session status if verified
-        if (result.valid && session.Status__c == 'Sealed') {
-            session.Status__c = 'Verified';
-            update session;
+        // Update session status to reflect the latest verification result.
+        // Only for sessions that have been sealed (Sealed, Verified, or Tampered);
+        // never touch an Active, not-yet-sealed session.
+        if (session.Status__c == 'Sealed' || session.Status__c == 'Verified' || session.Status__c == 'Tampered') {
+            String newStatus = result.valid ? 'Verified' : 'Tampered';
+            if (session.Status__c != newStatus) {
+                session.Status__c = newStatus;
+                update session;
+            }
         }
-
         return result;
     }
 

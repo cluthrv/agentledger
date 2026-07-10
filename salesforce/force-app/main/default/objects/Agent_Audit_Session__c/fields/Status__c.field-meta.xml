@@ -25,6 +25,11 @@
                 <default>false</default>
                 <label>Verified</label>
             </value>
+            <value>
+                <fullName>Tampered</fullName>
+                <default>false</default>
+                <label>Tampered</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
