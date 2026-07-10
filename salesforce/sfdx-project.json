@@ -10,7 +10,7 @@
     },
     {
       "versionName": "ver 0.1",
-      "versionNumber": "0.1.0.NEXT",
+      "versionNumber": "0.2.0.NEXT",
       "path": "force-app",
       "default": false,
       "package": "AgentLedger Core",
@@ -34,6 +34,7 @@
     "AgentLedger Core": "0HogK0000003BN7SAM",
     "AgentLedger Core@0.1.0-1": "04tgK000000E6rxQAC",
     "AgentLedger Core@0.1.0-2": "04tgK000000E6tZQAS",
-    "AgentLedger for Agentforce": "0HogK0000003GD7SAM"
+    "AgentLedger for Agentforce": "0HogK0000003GD7SAM",
+    "AgentLedger Core@0.2.0-1": "04tgK000000EE37QAG"
   }
 }
