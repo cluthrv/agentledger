@@ -48,8 +48,9 @@ Agentforce Agent
   Record Action x N   -> Agent_Audit_Record__c
       each record hashed (SHA-256) and chained to the previous
   Seal Session        -> Merkle root computed across all record hashes
+                         Status: Sealed
   Verify (any time)   -> recompute chain + root, compare to stored values
-                         -> Valid or Tampered
+                         Status: Verified or Tampered
 ```
 
 Each agent run is a **session**. Each decision or action within it is a **record**. Records are linked in a hash chain: record 2 references record 1's hash, record 3 references record 2's, and so on. Sealing computes a single Merkle root that fingerprints the entire session. Verification recomputes everything and compares. Any change to any field of any record breaks the chain and is caught.
@@ -96,6 +97,8 @@ Click the **Verify** button on any record page to run three integrity checks:
 
 If all three pass, the audit trail is intact. If any check fails, the specific tampered record is identified. In the audit trail component, the sealed session's root is shown as the **Verification Fingerprint**.
 
+Verification also updates the session's status to reflect the result: **Verified** if the chain is intact, **Tampered** if it is not. You can verify a session as many times as you like. If a tampered record is restored to its original content, the next verification returns Verified again, because the recomputed hashes match once more. The status always reflects the most recent check.
+
 ## Who it's for
 
 Different people ask different questions of an AI agent's decisions. AgentLedger answers all three from the same record.
@@ -134,6 +137,20 @@ An agent performs KYC/AML checks on new accounts, evaluates risk scores, flags s
 
 When regulators audit the screening process, the tamper-evident trail proves what data the agent evaluated, what score it calculated, and that the records are intact since the original assessment.
 
+## Scope and limitations
+
+Being clear about what this does and does not cover.
+
+**What AgentLedger handles today.** Decision provenance for a single agent operating within one Salesforce org. The agent starts a session, records each decision and action with its reasoning, and seals the session. Anyone can later verify the record is unaltered. This covers the common case: an agent qualifying an opportunity, escalating a case, applying pricing, or screening an account.
+
+**What it does not handle yet.**
+
+*Multi-agent orchestration.* When an orchestrator agent triggers several downstream agents and processes, the decision path spans multiple agents. AgentLedger currently scopes a session to one agent run. There is no linkage between a parent session and the child sessions it spawned, so you cannot verify an entire orchestration tree as a single unit. This is a natural extension and a good area for contribution.
+
+*Agents outside your control boundary.* When you call an external agent over MCP or another protocol, AgentLedger can record your side of the exchange: what you sent, what came back, and what you did with it. It cannot prove what happened inside the other system. That requires the external party to cryptographically sign their own execution, which is a harder problem that standards work is only beginning to address.
+
+Practitioners have pointed out, correctly, that the need for provenance is most acute precisely in these harder cases. AgentLedger addresses the in-org, per-agent foundation first. The cross-agent and cross-boundary cases build on that foundation, and contributions in that direction are welcome.
+
 ## Installation
 
 There are two ways to install AgentLedger. Both give you the full framework. They differ only in how the four Agentforce actions get registered.
@@ -142,7 +159,7 @@ There are two ways to install AgentLedger. Both give you the full framework. The
 
 Install the released package directly:
 
-https://login.salesforce.com/packaging/installPackage.apexp?p0=04tgK000000E6tZQAS
+https://login.salesforce.com/packaging/installPackage.apexp?p0=04tgK000000EE37QAG
 
 The package includes the objects, all Apex (including the four action classes), the Lightning Web Component, the permission set, and the tabs. It does not include the Agentforce action registrations, because GenAiFunction metadata is not currently packageable on its own. After installing, register the four actions once. Two ways to do that:
 
@@ -218,7 +235,13 @@ This is an optional extension and is not included in this package, to keep the c
 
 ## Contributing
 
-AgentLedger is open source and contributions are welcome. Good first issues include making the component labels configurable through App Builder properties, adding pagination to the audit trail for records with many sessions, and hyperlinking session numbers to their detail records. Open an issue to discuss an idea before submitting a pull request.
+AgentLedger is open source and contributions are welcome.
+
+Good first issues include making the component labels configurable through App Builder properties, adding pagination to the audit trail for records with many sessions, hyperlinking session numbers to their detail records, and showing which user initiated each agent run.
+
+Larger areas where help would be genuinely valuable: linking parent and child sessions so a multi-agent orchestration can be verified as one tree, and recording the request and response side of calls to external agents over MCP.
+
+Open an issue to discuss an idea before submitting a pull request.
 
 ## Documentation
 

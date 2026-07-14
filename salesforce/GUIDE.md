@@ -24,6 +24,16 @@ The reason this matters more for AI than for traditional automation is determini
 
 A note on the storage question: because AgentLedger stores the reasoning in a Salesforce object, that object is editable like any other. AgentLedger does not prevent editing. It makes editing detectable. Every existing way of recording agent output, a field, a note, an event log, is already editable and cannot detect an edit. AgentLedger replaces those editable, undetectable surfaces with one that is editable but tamper-evident: verification returns Tampered if any sealed record was changed.
 
+## Scope and limitations
+
+**What AgentLedger handles today.** Decision provenance for a single agent operating within one Salesforce org. The agent starts a session, records each decision and action with its reasoning, and seals the session. Anyone can later verify the record is unaltered.
+
+**Multi-agent orchestration is not covered yet.** When an orchestrator agent triggers several downstream agents and processes, the decision path spans multiple agents. A session in AgentLedger is scoped to one agent run, and there is no linkage between a parent session and the child sessions it spawned. You cannot currently verify an entire orchestration tree as a single unit. Adding parent-child session linkage is a natural extension and a good area for contribution.
+
+**Agents outside your control boundary are only partially addressable.** When an agent calls an external agent over MCP or another protocol, AgentLedger can record your side of the exchange: what was sent, what came back, and what was done with it. It cannot prove what happened inside the other system. That requires the external party to cryptographically sign their own execution, which is a harder problem that standards work is only beginning to address.
+
+The need for provenance is arguably most acute in exactly these harder cases. AgentLedger addresses the in-org, per-agent foundation first, and the cross-agent and cross-boundary cases build on that foundation.
+
 ## Architecture
 
 There are three layers.
@@ -52,7 +62,7 @@ One session per agent run.
 | Name | Auto Number (AAS-{0000}) | Session identifier |
 | Session_Id__c | Text(36), Unique | UUID for the session |
 | Agent_Id__c | Text(255), Required | Identifier of the AI agent |
-| Status__c | Picklist, Required | Active, Sealed, or Verified |
+| Status__c | Picklist, Required | Active, Sealed, Verified, or Tampered. Unrestricted picklist, so new values propagate cleanly on package upgrade. |
 | Merkle_Root__c | Text(64) | SHA-256 Merkle root (set on seal) |
 | Record_Count__c | Number(18,0) | Total actions recorded |
 | Start_Time__c | DateTime, Required | When the session started |
@@ -111,7 +121,7 @@ The primary API. Uses positional parameters.
 | startSession | `Id startSession(String agentId, String relatedRecordId, String platform)` | Creates a session linked to a record, returns its Id |
 | recordAction | `Agent_Audit_Record__c recordAction(Id sessionId, String agentId, String actionType, String inputContext, String outputResult, String reasoning)` | Creates a record, computes its hash, chains it, increments the session count |
 | sealSession | `String sealSession(Id sessionId)` | Seals via MerkleTreeService, returns the Merkle root |
-| verifySession | `VerifySessionResult verifySession(Id sessionId)` | Runs hash-chain, Merkle-root, and record-count checks; updates Status to Verified if all pass |
+| verifySession | `VerifySessionResult verifySession(Id sessionId)` | Runs hash-chain, Merkle-root, and record-count checks. Updates Status to Verified if all pass, Tampered if any fail. Sessions can be re-verified any number of times, and the status always reflects the latest check. Never changes the status of a session that has not been sealed. |
 
 `VerifySessionResult`: `Boolean valid`, `String message`, `List<VerificationCheck> checks`.
 
@@ -145,7 +155,7 @@ Call last, before responding to the user. Once sealed, no further records can be
 **Label:** Verify AgentLedger Session
 **Inputs:** `sessionId` (required)
 **Outputs:** `valid`, `message`, `success`, `errorMessage`
-Optional in the standard flow. Use to confirm integrity on demand.
+Optional in the standard flow. Use to confirm integrity on demand. Verification is repeatable: it sets the session status to Verified or Tampered based on the current state of the records, so a session that was tampered with and then restored will verify successfully again.
 
 ---
 
@@ -237,11 +247,13 @@ Run the agent on records with different values. The reasoning and decisions will
 
 ### Test 3: Tamper detection
 1. Run the agent to create a sealed session.
-2. Edit a content field (for example, Reasoning) on one audit record.
-3. Return to the record page and click Verify.
-4. It shows Tampered, because the stored hash was computed from the original content.
+2. Click Verify. The session shows Verified.
+3. Edit a content field (for example, Reasoning) on one audit record.
+4. Return to the record page and click Verify.
+5. It shows Tampered, because the stored hash was computed from the original content. The session status updates to Tampered as well.
+6. Restore the field to its original content and click Verify again. The session returns to Verified.
 
-This proves that any modification to a decision record after sealing is detected.
+This proves that any modification to a decision record after sealing is detected, and that verification reflects the current state of the records rather than a one-time verdict.
 
 ### Test 4: Second object with no code changes
 Repeat the configuration steps for a different object (for example, Case). Register the same four actions to a new subagent, point Get Record Details and Update Record at Case, and drop the same LWC on the Case page. The framework works unchanged. This demonstrates the actions and the component are genuinely generic.
