@@ -6,41 +6,15 @@ AgentLedger records every decision an Agentforce agent makes into a permanent, t
 
 It is an evidentiary layer, not a monitoring tool. It sits above Salesforce's observability, not in place of it.
 
-## What Salesforce already gives you, and what it doesn't
+## What Salesforce gives you, and what it doesn't
 
-Salesforce already lets you see how an agent reasons. Agentforce provides a Plan Tracer, event logs, and response citations. You can watch an agent interpret a prompt, select tools, apply reasoning, and produce an output. For building, debugging, and monitoring agents, these tools are good and you should use them.
+Agentforce already lets you see how an agent reasons, through Plan Tracer, event logs, and citations. Those are good for building, debugging, and monitoring agents. But that is observability: operational, transient, and mutable. It tells you whether the agent is working now.
 
-But observability and provenance are different things, and they serve different people at different times.
+Provenance is different. It answers the question observability does not: months later, can you prove what the agent decided, and that the record has not been altered since?
 
-Observability is for the engineer watching the agent now. It answers: is the agent working, why did this run fail, how many steps did it take, what did it cost. It is operational telemetry. It is also transient. Event logs are retention-limited, they are meant for performance analysis, and the reasoning they capture, once written, is ordinary mutable data with no proof it hasn't changed.
+This matters more for AI than for traditional automation. A Flow is deterministic, so you can re-run it to see what it did. AI agents are not. The same input can produce different reasoning on different runs, so the reasoning captured at the time is the only record you have. If it lives in an editable field, it is a claim, not evidence.
 
-Provenance is for the compliance officer, auditor, or lawyer who needs to establish, later, what an agent decided and prove that record is authentic. It answers one question observability does not: can you prove the record of what the agent decided has not been altered since the moment it was made.
-
-That is the gap AgentLedger fills. Not "Salesforce can't show you agent reasoning," it can. The gap is that nothing native makes that reasoning a durable, tamper-evident, independently verifiable record.
-
-There is a second, subtler distinction worth being precise about, because features like Field Audit Trail and Data Cloud are sometimes described as making records "immutable." That immutability is trust-based: the record is protected because the platform promises not to let it change, and that promise holds as long as no one with sufficient access ever circumvents it. AgentLedger's guarantee is different in kind. It is cryptographically self-verifying. Anyone, including an external auditor with no Salesforce access at all, can recompute the record's fingerprint and prove whether it was altered, without trusting the platform, the administrator, or the person presenting the record. Trust-based immutability answers "the system says this was not changed." Cryptographic verification answers "here is proof it was not," independent of the system. When the party asking is a regulator, opposing counsel, or an auditor who will not simply take your word, only the second one settles the question.
-
-## Why this matters more for AI than for regular automation
-
-Traditional Salesforce automation is deterministic. The same input produces the same output, so if you ever need to know what a Flow did, you can re-run it and reproduce the result. The logic is the record.
-
-AI agents are not deterministic. The same opportunity can produce different reasoning on different runs. You cannot reproduce a past decision by re-running the agent. The only record of why an agent decided what it did is the reasoning it captured at that moment. If that reasoning is stored as ordinary editable text, it is not evidence. It is a claim. AgentLedger turns it into evidence.
-
-## A concrete case
-
-An agent approves a 40% discount on a large deal at 2am. Three weeks later, finance asks why. You open the record and the reasoning says the discount met standard policy.
-
-But is that what the agent actually concluded, or did someone edit the field afterward to make a mistake look routine? The event logs may have aged out. The reasoning field is editable, and an edited field looks identical to an original one.
-
-With AgentLedger, you run Verify. It recomputes the cryptographic hash of the record and compares it to the value sealed at decision time. Either it confirms the record is exactly what the agent produced, or it returns Tampered. That is the difference between a claim and proof.
-
-## Doesn't storing the reasoning create the tampering risk?
-
-A fair objection: if AgentLedger stores the reasoning in a Salesforce object, and that object is editable, hasn't AgentLedger introduced the very problem it claims to solve?
-
-No. The reasoning has to be stored somewhere for it to have any value at all. Every existing way teams record agent output today, a field, a note, a Chatter post, an event log, is editable, and none of them can detect an edit. Editability is inherent to storing data in any CRM. AgentLedger does not add an editable surface that wasn't there. It replaces several editable, undetectable surfaces with one editable but tamper-evident one.
-
-Like a tamper-evident seal on a medicine bottle, it does not prevent the bottle from being opened. It makes opening it obvious. The record can still be edited by anyone with access. The difference is that after AgentLedger, the edit is detectable: verification returns Tampered instead of Verified. Forging one field is trivial. Forging the entire hash chain and Merkle root consistently is the hard problem cryptographic sealing creates.
+Features like Field Audit Trail and Data Cloud are sometimes called "immutable," but that is trust-based: the record is protected because the platform promises not to let it change. AgentLedger is cryptographically self-verifying instead. Anyone, including an external auditor with no Salesforce access, can recompute the record's fingerprint and prove whether it was altered, without trusting the platform, the admin, or whoever is presenting it. Trust-based immutability says "the system says this wasn't changed." Cryptographic verification says "here is proof it wasn't." When the party asking won't take your word, only the second one settles it.
 
 ## How it works
 
@@ -121,7 +95,7 @@ The riskiest moment in adopting AI agents is not the agent acting on its own. It
 
 AgentLedger records what the agent recommended and whether a human acted on it or diverged from it, in a verifiable form. It does not judge the override. It records it. That cuts both ways, and that is the point. It protects the person who overrode for a sound, documented reason, and it creates accountability where a recommendation was ignored without one.
 
-This is often the most immediately useful reason to adopt AgentLedger, and it speaks directly to teams that are cautious about giving agents autonomy. You do not have to let the agent be in charge. Humans stay in control, they can override freely, and every recommendation and every divergence from it is on the record. A few concrete situations where this matters:
+This is often the most immediately useful reason to adopt AgentLedger. It speaks directly to teams cautious about giving agents autonomy: humans stay in control, they can override freely, and every recommendation and divergence is on the record. A few situations where this matters:
 
 - **Discount and pricing overrides.** An agent recommends against a discount that breaches margin or policy. A rep grants it anyway. When finance later questions the margin, the record shows the recommendation and who chose to proceed.
 - **Escalation declined.** An agent recommends escalating a case based on SLA risk or sentiment. A supervisor decides not to. If the customer churns or complains, the record shows the escalation was recommended and declined.
@@ -131,43 +105,20 @@ This is often the most immediately useful reason to adopt AgentLedger, and it sp
 
 In each case AgentLedger provides a verifiable record of the recommendation and the decision to diverge from it. That record protects the organization and the individual, and it is exactly the accountability that lets cautious stakeholders get comfortable letting agents into consequential workflows.
 
-### Opportunity Qualification
+### Other use cases
 
-An agent evaluates opportunities by querying account data, checking deal size and momentum against qualification criteria, advancing the stage when the deal qualifies, and recording its decision. AgentLedger records every evaluation factor and the advancement decision.
+The same components apply across domains. In each, AgentLedger records the agent's factors and decision, and the chain proves the record wasn't altered afterward.
 
-When the sales VP asks why the AI advanced a deal, the audit trail shows exactly what the agent considered and what criteria it applied. The cryptographic chain proves nobody altered that reasoning afterward.
-
-### Case Escalation
-
-An agent monitors incoming cases, checks SLA thresholds, evaluates account tier and severity, and escalates when criteria are met. AgentLedger records the evaluation, the escalation decision, and the priority change.
-
-When a customer disputes an escalation path or an SLA breach occurs, the tamper-evident trail proves what the agent evaluated and when, and proves the records weren't modified after the incident.
-
-### CPQ Pricing
-
-An agent retrieves pricing rules, applies tier discounts, validates floor prices, checks credit limits, and generates quotes. AgentLedger records every pricing calculation, discount application, and validation.
-
-When a pricing dispute arises or an audit reveals an unusual discount, the trail shows exactly what rules the agent applied. The hash chain proves the pricing rationale wasn't changed retroactively.
-
-### Compliance Screening
-
-An agent performs KYC/AML checks on new accounts, evaluates risk scores, flags suspicious patterns, and determines verification levels. AgentLedger records every screening factor, risk calculation, and decision.
-
-When regulators audit the screening process, the tamper-evident trail proves what data the agent evaluated, what score it calculated, and that the records are intact since the original assessment.
+- **Opportunity Qualification.** An agent checks deal size and momentum against criteria, advances the stage when a deal qualifies, and records why. When the sales VP asks why the AI advanced a deal, the trail shows exactly what it considered.
+- **Case Escalation.** An agent checks SLA thresholds, account tier, and severity, and escalates when warranted. When a customer disputes an escalation or an SLA breach occurs, the trail proves what the agent evaluated and when.
+- **CPQ Pricing.** An agent applies tier discounts, validates floor prices, and checks credit limits. When a pricing dispute or audit arises, the trail shows exactly what rules were applied and that they weren't changed retroactively.
+- **Compliance Screening.** An agent runs KYC/AML checks, scores risk, and flags patterns. When regulators audit the process, the trail proves what was evaluated and that the records are intact since the assessment.
 
 ## Scope and limitations
 
-Being clear about what this does and does not cover.
+AgentLedger handles decision provenance for a single agent operating within one Salesforce org. The agent starts a session, records each decision with its reasoning, and seals it, and anyone can later verify the record is unaltered. This covers the common cases: qualifying an opportunity, escalating a case, applying pricing, screening an account.
 
-**What AgentLedger handles today.** Decision provenance for a single agent operating within one Salesforce org. The agent starts a session, records each decision and action with its reasoning, and seals the session. Anyone can later verify the record is unaltered. This covers the common case: an agent qualifying an opportunity, escalating a case, applying pricing, or screening an account.
-
-**What it does not handle yet.**
-
-*Multi-agent orchestration.* When an orchestrator agent triggers several downstream agents and processes, the decision path spans multiple agents. AgentLedger currently scopes a session to one agent run. There is no linkage between a parent session and the child sessions it spawned, so you cannot verify an entire orchestration tree as a single unit. This is a natural extension and a good area for contribution.
-
-*Agents outside your control boundary.* When you call an external agent over MCP or another protocol, AgentLedger can record your side of the exchange: what you sent, what came back, and what you did with it. It cannot prove what happened inside the other system. That requires the external party to cryptographically sign their own execution, which is a harder problem that standards work is only beginning to address.
-
-Practitioners have pointed out, correctly, that the need for provenance is most acute precisely in these harder cases. AgentLedger addresses the in-org, per-agent foundation first. The cross-agent and cross-boundary cases build on that foundation, and contributions in that direction are welcome.
+Multi-agent orchestration and cross-boundary calls to external agents are not covered today. Practitioners have rightly noted the need is most acute in exactly those harder cases, and they are the framework's next direction. See the Roadmap below.
 
 ## Installation
 
@@ -237,11 +188,7 @@ The Case example demonstrates that AgentLedger records not just what an agent *r
 
 ## Optional: blockchain anchoring
 
-For maximum assurance, AgentLedger's Merkle root can be anchored to an external ledger (such as Ethereum or Arbitrum) after sealing. Only the 64-character root hash is stored externally. No business data, no customer information, and no agent reasoning touches the external ledger.
-
-External anchoring allows independent verification that a sealed session existed at a specific point in time and that its Merkle root has not changed, moving the guarantee from tamper-evidence to non-repudiation.
-
-This is an optional extension and is not included in this package, to keep the core framework dependency-free.
+For maximum assurance, a sealed session's Merkle root can be anchored to an external ledger. Only the 64-character root hash is stored externally, never business data or agent reasoning. This lets an independent party confirm a sealed session existed at a point in time and has not changed since, moving the guarantee from tamper-evidence toward non-repudiation. It is an optional extension, not included in the core package, to keep the framework dependency-free.
 
 ## Architecture notes
 
@@ -251,15 +198,20 @@ This is an optional extension and is not included in this package, to keep the c
 
 **Native storage.** Everything lives in standard Salesforce custom objects. No external dependencies, no managed package required. Deploy the source and go.
 
+## Roadmap
+
+Directions the framework is heading. These are areas of active exploration, and good places to contribute.
+
+- **Multi-agent orchestration.** Linking parent and child sessions so that when an orchestrator agent invokes several sub-agents, the entire decision tree can be sealed and verified as a single unit. Practitioners have consistently pointed to this as where provenance matters most, and it is the natural next step for the framework. Exploration in progress.
+- **External anchoring.** Optionally anchoring a sealed session's fingerprint to an independent external ledger, so integrity and timing are attested by a party outside your own system. This extends tamper-evidence toward non-repudiation.
+- **Cross-boundary recording.** Capturing the request and response side of calls to external agents over MCP or similar protocols, for the cases where part of the decision happens outside your control.
+- **Smaller enhancements.** Configurable component labels, audit-trail pagination, and showing which user initiated each run.
+
+Contributions in any of these directions are welcome. Open an issue to discuss before submitting a pull request.
+
 ## Contributing
 
-AgentLedger is open source and contributions are welcome.
-
-Good first issues include making the component labels configurable through App Builder properties, adding pagination to the audit trail for records with many sessions, hyperlinking session numbers to their detail records, and showing which user initiated each agent run.
-
-Larger areas where help would be genuinely valuable: linking parent and child sessions so a multi-agent orchestration can be verified as one tree, and recording the request and response side of calls to external agents over MCP.
-
-Open an issue to discuss an idea before submitting a pull request.
+AgentLedger is open source and contributions are welcome. Good first issues are labeled in the repo. The Roadmap above lists the larger areas where help is most valuable. Open an issue to discuss an idea before submitting a pull request.
 
 ## Documentation
 
