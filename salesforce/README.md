@@ -18,6 +18,8 @@ Provenance is for the compliance officer, auditor, or lawyer who needs to establ
 
 That is the gap AgentLedger fills. Not "Salesforce can't show you agent reasoning," it can. The gap is that nothing native makes that reasoning a durable, tamper-evident, independently verifiable record.
 
+There is a second, subtler distinction worth being precise about, because features like Field Audit Trail and Data Cloud are sometimes described as making records "immutable." That immutability is trust-based: the record is protected because the platform promises not to let it change, and that promise holds as long as no one with sufficient access ever circumvents it. AgentLedger's guarantee is different in kind. It is cryptographically self-verifying. Anyone, including an external auditor with no Salesforce access at all, can recompute the record's fingerprint and prove whether it was altered, without trusting the platform, the administrator, or the person presenting the record. Trust-based immutability answers "the system says this was not changed." Cryptographic verification answers "here is proof it was not," independent of the system. When the party asking is a regulator, opposing counsel, or an auditor who will not simply take your word, only the second one settles the question.
+
 ## Why this matters more for AI than for regular automation
 
 Traditional Salesforce automation is deterministic. The same input produces the same output, so if you ever need to know what a Flow did, you can re-run it and reproduce the result. The logic is the record.
@@ -112,6 +114,22 @@ Different people ask different questions of an AI agent's decisions. AgentLedger
 ## Use cases
 
 The framework is object-agnostic. The same components apply wherever an agent makes consequential decisions.
+
+### Human overrides of agent recommendations
+
+The riskiest moment in adopting AI agents is not the agent acting on its own. It is the moment a human overrides what the agent recommended. Sometimes overriding the agent is exactly the right call. Sometimes a warning gets quietly ignored. Either way, when consequences follow, someone asks whether it was a considered decision or a disregarded recommendation.
+
+AgentLedger records what the agent recommended and whether a human acted on it or diverged from it, in a verifiable form. It does not judge the override. It records it. That cuts both ways, and that is the point. It protects the person who overrode for a sound, documented reason, and it creates accountability where a recommendation was ignored without one.
+
+This is often the most immediately useful reason to adopt AgentLedger, and it speaks directly to teams that are cautious about giving agents autonomy. You do not have to let the agent be in charge. Humans stay in control, they can override freely, and every recommendation and every divergence from it is on the record. A few concrete situations where this matters:
+
+- **Discount and pricing overrides.** An agent recommends against a discount that breaches margin or policy. A rep grants it anyway. When finance later questions the margin, the record shows the recommendation and who chose to proceed.
+- **Escalation declined.** An agent recommends escalating a case based on SLA risk or sentiment. A supervisor decides not to. If the customer churns or complains, the record shows the escalation was recommended and declined.
+- **Risk or fraud flag cleared.** An agent flags a transaction, account, or loan as high risk. A human clears or approves it. If it later proves to be a problem, there is a tamper-evident record that the system flagged it and a person overrode.
+- **Data or configuration impact ignored.** An agent reviewing a bulk update or configuration change flags a downstream impact, such as breaking an integration or a report. An admin proceeds anyway. When something breaks, the record shows the warning existed.
+- **Approval or compliance step skipped.** An agent recommends routing an action for additional approval, or flags a consent or policy issue. A human proceeds without it. The record captures the recommendation to escalate and the decision not to.
+
+In each case AgentLedger provides a verifiable record of the recommendation and the decision to diverge from it. That record protects the organization and the individual, and it is exactly the accountability that lets cautious stakeholders get comfortable letting agents into consequential workflows.
 
 ### Opportunity Qualification
 
