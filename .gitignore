@@ -11,3 +11,13 @@ salesforce/.sfdx/
 salesforce/.sf/
 salesforce/node_modules/
 cleanup.apex
+
+# Local backups and root-level duplicates of salesforce/
+_local_backup/
+/force-app/
+/config/
+/scripts/
+/sfdx-project.json
+/.forceignore
+.vscode/
+.husky/
