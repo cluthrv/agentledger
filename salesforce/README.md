@@ -400,9 +400,6 @@ See [GUIDE.md](GUIDE.md) for:
 * Test procedures
 * Deployment guidance
 
-## Related
-
-* Core TypeScript library: `@vluthra/agent-ledger` on npm
 
 ## License
 
