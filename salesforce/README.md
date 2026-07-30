@@ -2,7 +2,7 @@
 
 An open-source, Salesforce-native foundation for tamper-evident Agentforce decision provenance.
 
-AgentLedger creates tamper-evident records of the decisions and actions an Agentforce agent submits to it. Each record is hashed with SHA-256, a widely used cryptographic hash function also used in Bitcoin's design, and chained to the one before it. When a session ends, all records are sealed under a Merkle root. If any sealed record is modified afterward, verification fails and the change becomes cryptographically detectable.
+AgentLedger creates tamper-evident records of the decisions and actions an Agentforce agent submits to it. Each record is hashed with SHA-256, a widely used cryptographic hash function, and chained to the one before it. When a session ends, all records are sealed under a Merkle root. If any sealed record is modified afterward, verification fails and the change becomes cryptographically detectable.
 
 It is an evidentiary layer, not a monitoring tool. It complements Salesforce's observability by creating durable, business-record-level decision receipts for later governance, investigation, and audit. It does not replace observability, and it is a foundation rather than a complete enterprise governance platform. See Scope and limitations below for exactly what it does and does not cover.
 
