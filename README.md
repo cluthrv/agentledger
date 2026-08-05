@@ -1,6 +1,6 @@
 # AgentLedger
 
-Cryptographic audit trails for AI agent operations.
+Tamper-evident audit trails for AI agent operations.
 
 AgentLedger creates tamper-evident records of what AI agents do. It uses SHA-256 hash chains and Merkle trees so that any change to a recorded action after the fact becomes cryptographically detectable.
 
@@ -32,6 +32,7 @@ AgentLedger verifies the integrity of the records submitted to it. Being precise
 - It detects changes to recorded actions after sealing. It does not prove that the agent recorded every action that occurred.
 - It protects recorded values after they are written. It does not independently confirm that those values match the underlying operation.
 - Verification reflects the current state of the records against the sealed fingerprint. It does not provide a continuous chain of custody on its own.
+- Because records and fingerprint can live in the same boundary, stronger assurance against a privileged actor rewriting both comes from anchoring the fingerprint to an independent, externally controlled location.
 - It supports traceability and evidence integrity. It does not determine regulatory compliance.
 
 ## Installation
@@ -49,16 +50,16 @@ import { AgentLedgerSession, ActionType } from '@vluthra/agent-ledger';
 const session = new AgentLedgerSession({
   agentId: 'pricing-agent',
   platform: 'salesforce',
-  initiator: 'dealer-portal',
+  initiator: 'quote-workflow',
 });
 
 // 2. Record agent actions
 session.record({
   agentId: 'pricing-agent',
   actionType: ActionType.QUERY,
-  input: { query: 'Get dealer tier for account ACC-100' },
+  input: { query: 'Get account tier for account ACC-100' },
   output: { tier: 'Gold', discountPct: 15 },
-  reasoning: 'Queried account master for dealer classification',
+  reasoning: 'Queried account master for classification',
 });
 
 session.record({
@@ -187,7 +188,7 @@ import {
 
 ## Use cases
 
-- **B2B commerce:** record AI agents that modify dealer pricing, generate quotes, or update product catalogs
+- **B2B commerce:** record AI agents that modify pricing, generate quotes, or update product catalogs
 - **CRM:** track AI agents that update customer records, route cases, or make recommendations
 - **CPQ:** record AI agents that configure products, calculate pricing, or apply discount rules
 - **Governance and audit:** provide a verifiable record of agent decisions for later review
@@ -198,7 +199,7 @@ import {
 - **Zero external dependencies.** The core library uses only the Node.js built-in `crypto` module.
 - **Platform-agnostic.** Works with any AI agent framework, including LangChain, CrewAI, Salesforce Agentforce, and custom agents.
 - **Deterministic hashing.** Identical inputs always produce identical hashes regardless of object property ordering.
-- **Tamper-evident by design.** Once created, Action Records cannot be modified without detection.
+- **Tamper-evident by design.** Once a record is created, any change to it becomes detectable on verification.
 
 ## Development
 
@@ -223,6 +224,7 @@ npm run build
 - [ ] REST verification API with OpenAPI spec
 - [ ] Storage adapters (PostgreSQL, DynamoDB)
 - [ ] CLI tool for offline verification
+- [ ] External anchoring of the sealed fingerprint to an independent ledger
 
 ## License
 
@@ -230,4 +232,4 @@ MIT. See [LICENSE](LICENSE).
 
 ## Author
 
-Vikas Luthra, enterprise solution architect specializing in B2B commerce, CRM, and CPQ platforms.
+Vikas Luthra, enterprise solution architect.
