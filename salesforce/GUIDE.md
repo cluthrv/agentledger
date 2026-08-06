@@ -196,41 +196,114 @@ The four AgentLedger actions ship as GenAiFunction metadata and register automat
 Create an Agentforce (Employee) agent. Add a subagent for your use case (for example, Opportunity Qualification). Assign the four AgentLedger actions plus a standard Get Record Details action, and a standard Update Record action if the agent needs to write.
 
 ### 3. Write the subagent instructions
-Tell the agent to start a session, retrieve the record, record each step, and seal before responding. Example:
+
+The agent needs instructions telling it to start a session, record each meaningful step, and seal before responding. There are two ways to write these, and both are validated in this repository.
+
+**Approach A: the reusable block.** A generic, task-agnostic set of recording rules you paste into any subagent, followed by your specific task. This is the simplest way to add AgentLedger to a new agent. Recording relies on the agent applying the "record every meaningful step" rule on its own, which is reliable in testing but less prescriptive than spelling out each step.
+
+**Approach B: explicit numbered steps.** You tell the agent exactly what to record at each step of its specific task. This is more verbose and less reusable, but gives tighter control over what gets captured, which helps for complex flows.
+
+Both are shown below. Whichever you use, the sealing instruction must be forceful. In testing, a session left unsealed most often happens on a branch where the agent takes no action or waits for a user confirmation and then ends its turn without sealing. The language below is written to prevent that.
+
+#### Approach A: reusable block
+
+Paste everything above "Your task" into any subagent, then write your own task beneath it.
 
 ```
+This agent records its work in a tamper-evident AgentLedger session.
+Follow these recording rules in addition to your task instructions.
+
+Start: At the very start of the run, before taking any other action,
+call "Start AgentLedger Session". Use the record you are working on as
+the Related Record Id. Keep the returned Session Id and use it for every
+AgentLedger action in this run.
+
+Record: Whenever you query data, validate a condition, make a decision,
+perform a calculation, or create or update a record, call "Record Agent
+Action" for that step. Provide the Session Id, an Action Type that
+matches what you did (Query, Validation, Decision, Calculation, Create,
+or Update), what you looked at, what you produced, and your reasoning.
+Record every meaningful step, even minor ones. If you have taken an
+action and not yet recorded it, record it before continuing.
+
+Seal: Sealing is MANDATORY and must never be skipped. Before you finish
+and respond to the user, always call "Seal AgentLedger Session" with the
+Session Id. This applies whether or not you updated any record, and
+whether or not the user confirmed an action. Never end your turn with a
+started but unsealed session. A session that is started and never sealed
+is invalid and has no cryptographic protection.
+
+Your task:
+[Describe what this agent does. Example, for case escalation:]
+Evaluate the Case against escalation criteria. A Case qualifies if its
+Priority is High and its Status is not already Escalated. If it
+qualifies, set Status to Escalated. If it does not qualify, do not
+change the Case. Always confirm with the user before updating the Case.
+Whether or not the Case is updated, and whether or not the user
+confirms, seal the session before ending your turn.
+```
+
+#### Approach B: explicit numbered steps
+
+A fully worked example for opportunity qualification.
+
+```
+You are an Opportunity Qualification subagent. When a user asks you to
+qualify an Opportunity, follow this exact sequence and do not skip any
+step. Steps 1 through 4 must ALL complete before you respond in Step 5.
+
 STEP 1 - Start the audit session.
 Call "Start AgentLedger Session" with:
-- Agent Id: "opportunity-qualification-agent"
-- Related Record Id: the Id of the record being processed
+- Agent Id: "opportunity-qualification"
+- Related Record Id: the Id of the Opportunity being qualified
 - Platform: "salesforce"
-Save the returned Session Id and pass it to every following action.
+Save the returned Session Id. Pass it to every following AgentLedger action.
 
-STEP 2 - Retrieve the record.
-Use "Get Record Details" to fetch the fields you need.
-Then call "Record Agent Action" with Action Type "Query" and a
-Reasoning describing what you retrieved.
+STEP 1.5 - Retrieve the Opportunity data.
+Use "Get Record Details" to fetch Name, Amount, StageName, CloseDate,
+and Probability. Then call "Record Agent Action" with Action Type
+"Query", passing the same Session Id, with Reasoning describing what
+you retrieved.
 
-STEP 3 - Record each step.
-Call "Record Agent Action" for each meaningful step, choosing the
-Action Type that fits (Query, Validation, Calculation, Decision,
-Update, Escalation). Always include a plain-language Reasoning.
+STEP 2 - Evaluate against the qualification criteria.
+Assess three criteria:
+1. Deal size: Amount is $10,000 or more.
+2. Timeline: CloseDate is within the next 120 days from today.
+3. Momentum: Probability is 10% or higher.
+For EACH criterion, call "Record Agent Action" with Action Type
+"Validation". In Output Result, state whether it passed or failed and
+the actual value. In Reasoning, explain the check in plain language.
 
-STEP 4 - Take action if needed.
-If the agent updates the record, use "Update Record", then call
-"Record Agent Action" with Action Type "Update" describing the change.
+STEP 3 - Make the qualification decision.
+Count how many criteria passed:
+- All three passed: decision is "Advance".
+- Two passed: decision is "Needs Work".
+- One or zero passed: decision is "Human Review Required".
+Call "Record Agent Action" with Action Type "Decision". State the
+decision and how many criteria passed in Output Result, and summarize
+the reasoning.
 
-STEP 5 - Record the final decision.
-Call "Record Agent Action" with Action Type "Decision" stating the
-outcome and summarizing why.
+STEP 3.5 - If the decision is "Advance", update the Opportunity.
+Only if the decision was "Advance": use "Update Record" to set
+StageName to "Needs Analysis", then call "Record Agent Action" with
+Action Type "Update" describing the change. If the decision was "Needs
+Work" or "Human Review Required", do NOT update the Opportunity.
 
-STEP 6 - Seal the session.
-Call "Seal AgentLedger Session" with the same Session Id. This must
-be the last AgentLedger action.
+STEP 4 - Seal the session. THIS STEP IS MANDATORY AND CANNOT BE SKIPPED.
+Call "Seal AgentLedger Session" with the same Session Id. This is always
+the LAST AgentLedger action. Do not respond to the user until the seal
+has completed and Success is true. If you started a session in Step 1,
+you must seal it here, whether or not you updated the Opportunity. Never
+end your turn with an unsealed session.
 
-STEP 7 - Respond in plain language. Do not mention session Ids,
-hashes, or Merkle roots unless the user asks about the audit trail.
+STEP 5 - Respond in plain language.
+Only after the seal has completed, give your recommendation in plain
+language: how many criteria were met and what the decision was. If you
+advanced the stage, say so. Do not mention Session Ids, hashes, or
+Merkle roots unless the user asks about the audit trail.
 ```
+
+Both agents above are validated end to end in this repository, on Opportunity and Case respectively, using the same four Invocable Actions with no code changes between them.
 
 ### 4. Add the LWC to the record page
 In Lightning App Builder, add the `recordAuditTrail` component to the record page of the object your agent acts on.
