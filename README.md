@@ -4,16 +4,19 @@ Tamper-evident audit trails for AI agent operations.
 
 AgentLedger creates tamper-evident records of what AI agents do. It uses SHA-256 hash chains and Merkle trees so that any change to a recorded action after the fact becomes cryptographically detectable.
 
-## Two implementations
+## Two implementations and a reference demo
 
-This repository contains two independent implementations of the same pattern:
+This repository contains two independent implementations of the same pattern, plus a runnable MCP demo:
 
-| Implementation | Location | Install |
-|---|---|---|
-| **TypeScript core library** | `src/` (this README) | `npm install @vluthra/agent-ledger` |
+| Implementation              | Location                     | Install                                                            |
+| --------------------------- | ---------------------------- | ------------------------------------------------------------------ |
+| **TypeScript core library** | `src/` (this README)         | `npm install @vluthra/agent-ledger`                                |
 | **Salesforce / Agentforce** | [`salesforce/`](salesforce/) | Unlocked package, see [salesforce/README.md](salesforce/README.md) |
+| **MCP gateway demo**        | [`mcp-demo/`](mcp-demo/)     | See [mcp-demo/README.md](mcp-demo/README.md)                       |
 
 The TypeScript library is platform-agnostic and works with any agent framework. The Salesforce implementation is a native Agentforce framework with Invocable Actions and a record-page component. They share the same hashing and sealing model but are separate codebases.
+
+The MCP demo is a runnable reference that captures tool calls at the client boundary across five MCP servers, seals the session, and anchors the Merkle root to a public test network. It shows the same hashing and sealing model applied at the MCP `tools/call` boundary, with external anchoring on top.
 
 ## The problem
 
@@ -33,6 +36,7 @@ AgentLedger verifies the integrity of the records submitted to it. Being precise
 - It protects recorded values after they are written. It does not independently confirm that those values match the underlying operation.
 - Verification reflects the current state of the records against the sealed fingerprint. It does not provide a continuous chain of custody on its own.
 - Because records and fingerprint can live in the same boundary, stronger assurance against a privileged actor rewriting both comes from anchoring the fingerprint to an independent, externally controlled location.
+- The MCP demo captures every tool call routed through the gateway boundary. That is a real guarantee for calls on that path, but it does not prove an agent had no other path outside the gateway.
 - It supports traceability and evidence integrity. It does not determine regulatory compliance.
 
 ## Installation
@@ -44,38 +48,38 @@ npm install @vluthra/agent-ledger
 ## Quick start
 
 ```typescript
-import { AgentLedgerSession, ActionType } from '@vluthra/agent-ledger';
+import { AgentLedgerSession, ActionType } from "@vluthra/agent-ledger";
 
 // 1. Create an audit session
 const session = new AgentLedgerSession({
-  agentId: 'pricing-agent',
-  platform: 'salesforce',
-  initiator: 'quote-workflow',
+  agentId: "pricing-agent",
+  platform: "salesforce",
+  initiator: "quote-workflow",
 });
 
 // 2. Record agent actions
 session.record({
-  agentId: 'pricing-agent',
+  agentId: "pricing-agent",
   actionType: ActionType.QUERY,
-  input: { query: 'Get account tier for account ACC-100' },
-  output: { tier: 'Gold', discountPct: 15 },
-  reasoning: 'Queried account master for classification',
+  input: { query: "Get account tier for account ACC-100" },
+  output: { tier: "Gold", discountPct: 15 },
+  reasoning: "Queried account master for classification",
 });
 
 session.record({
-  agentId: 'pricing-agent',
+  agentId: "pricing-agent",
   actionType: ActionType.CALCULATION,
   input: { basePrice: 200, discountPct: 15 },
   output: { finalPrice: 170 },
-  reasoning: 'Applied Gold tier discount to base price',
+  reasoning: "Applied Gold tier discount to base price",
 });
 
 session.record({
-  agentId: 'pricing-agent',
+  agentId: "pricing-agent",
   actionType: ActionType.CREATE,
-  input: { accountId: 'ACC-100', price: 170 },
-  output: { quoteId: 'Q-5678', status: 'draft' },
-  reasoning: 'Generated draft quote with validated pricing',
+  input: { accountId: "ACC-100", price: 170 },
+  output: { quoteId: "Q-5678", status: "draft" },
+  reasoning: "Generated draft quote with validated pricing",
 });
 
 // 3. Seal the session (computes Merkle root)
@@ -84,7 +88,7 @@ console.log(`Session sealed. Merkle root: ${sealed.merkleRoot}`);
 
 // 4. Verify the entire session
 const result = session.verify();
-console.log(`Verification: ${result.valid ? 'PASSED' : 'FAILED'}`);
+console.log(`Verification: ${result.valid ? "PASSED" : "FAILED"}`);
 
 // 5. Generate a proof for a specific action
 const proof = session.proveRecord(1); // the calculation step
@@ -119,6 +123,10 @@ When a session is sealed, the record hashes are organized into a binary Merkle t
 
 The root hash is a single fingerprint for the entire session. A Merkle proof allows verification of any single record against the root in O(log n) operations, without needing access to all other records.
 
+### External anchoring (MCP demo)
+
+The core library produces the sealed Merkle root. The MCP demo takes the next step: it anchors that root to an independent, externally controlled location so the fingerprint cannot be silently rewritten along with the records. The demo anchors to Arbitrum Sepolia, a public test network, and only the 32-byte Merkle root leaves the boundary. The underlying records and recorded rationale stay inside. Anchoring is pluggable: a transparency log or a trusted timestamping service can serve the same purpose. See [`mcp-demo/`](mcp-demo/).
+
 ## API reference
 
 ### AgentLedgerSession
@@ -131,25 +139,25 @@ The primary interface for creating and managing audit sessions.
 new AgentLedgerSession(options: SessionOptions)
 ```
 
-| Option | Type | Required | Description |
-|---|---|---|---|
-| `agentId` | `string` | Yes | Identifier for the AI agent |
-| `initiator` | `string` | No | Who or what started this session |
-| `platform` | `string` | No | Platform identifier (e.g. `'salesforce'`) |
-| `metadata` | `Record<string, unknown>` | No | Arbitrary session-level metadata |
+| Option      | Type                      | Required | Description                               |
+| ----------- | ------------------------- | -------- | ----------------------------------------- |
+| `agentId`   | `string`                  | Yes      | Identifier for the AI agent               |
+| `initiator` | `string`                  | No       | Who or what started this session          |
+| `platform`  | `string`                  | No       | Platform identifier (e.g. `'salesforce'`) |
+| `metadata`  | `Record<string, unknown>` | No       | Arbitrary session-level metadata          |
 
 #### Methods
 
-| Method | Returns | Description |
-|---|---|---|
-| `record(input)` | `ActionRecord` | Record an agent action and chain it |
-| `seal()` | `AuditSession` | Seal the session with a Merkle root |
-| `verify()` | `VerificationResult` | Verify chain and Merkle root integrity |
-| `proveRecord(index)` | `MerkleProof \| null` | Generate a Merkle proof for one record |
-| `verifyProof(proof)` | `boolean` | Verify a Merkle proof |
-| `getRecord(index)` | `ActionRecord \| undefined` | Get a specific record |
-| `getRecords()` | `ActionRecord[]` | Get all records (copy) |
-| `export()` | `{ session, records }` | Export complete session data |
+| Method               | Returns                     | Description                            |
+| -------------------- | --------------------------- | -------------------------------------- |
+| `record(input)`      | `ActionRecord`              | Record an agent action and chain it    |
+| `seal()`             | `AuditSession`              | Seal the session with a Merkle root    |
+| `verify()`           | `VerificationResult`        | Verify chain and Merkle root integrity |
+| `proveRecord(index)` | `MerkleProof \| null`       | Generate a Merkle proof for one record |
+| `verifyProof(proof)` | `boolean`                   | Verify a Merkle proof                  |
+| `getRecord(index)`   | `ActionRecord \| undefined` | Get a specific record                  |
+| `getRecords()`       | `ActionRecord[]`            | Get all records (copy)                 |
+| `export()`           | `{ session, records }`      | Export complete session data           |
 
 ### Action types
 
@@ -183,7 +191,7 @@ import {
   computeMerkleRoot,
   generateMerkleProof,
   verifyMerkleProof,
-} from '@vluthra/agent-ledger';
+} from "@vluthra/agent-ledger";
 ```
 
 ## Use cases
@@ -220,11 +228,13 @@ npm run build
 ## Roadmap
 
 - [x] Salesforce-native implementation (see [`salesforce/`](salesforce/))
+- [x] MCP gateway demo with boundary capture across multiple servers (see [`mcp-demo/`](mcp-demo/))
+- [x] External anchoring of the sealed fingerprint to an independent ledger (demonstrated in `mcp-demo/`, anchored to Arbitrum Sepolia)
 - [ ] Python SDK (PyPI package)
 - [ ] REST verification API with OpenAPI spec
 - [ ] Storage adapters (PostgreSQL, DynamoDB)
 - [ ] CLI tool for offline verification
-- [ ] External anchoring of the sealed fingerprint to an independent ledger
+- [ ] Reconciliation against operational telemetry for completeness beyond the boundary
 
 ## License
 
