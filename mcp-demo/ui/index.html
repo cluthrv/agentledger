@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AgentLedger</title>
+<style>
+  :root{--ink:#12232E;--ink2:#1B3540;--paper:#fff;--mist:#EEF3F5;--teal:#1E9E96;--green:#1F9D57;--red:#C0392B;--amber:#C6851F;--slate:#5A6B73;--line:#D5DEE1;--tx:#1C2B33;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Segoe UI,Calibri,system-ui,sans-serif;color:var(--tx);background:#F5F7F8;}
+  header{background:var(--ink);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:14px;}
+  header .dot{width:14px;height:14px;background:var(--teal);border-radius:3px;}
+  header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px;}
+  header .sub{color:#9fb3ba;font-size:13px;margin-left:6px;}
+  nav{display:flex;gap:2px;background:var(--ink2);padding:0 16px;}
+  nav button{background:none;border:none;color:#bcd0d6;padding:12px 18px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;}
+  nav button.active{color:#fff;border-bottom-color:var(--teal);font-weight:600;}
+  main{max-width:1080px;margin:24px auto;padding:0 16px;}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;}
+  h2{margin:0 0 4px;font-size:20px;}
+  .muted{color:var(--slate);font-size:13px;margin:0 0 16px;}
+  button.action{background:var(--teal);color:#fff;border:none;border-radius:7px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;}
+  button.action:hover{filter:brightness(1.05);} button.action:disabled{opacity:.5;cursor:default;}
+  button.ghost{background:#fff;color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:9px 16px;font-size:14px;cursor:pointer;}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .col h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--slate);margin:0 0 10px;}
+  .stream{min-height:320px;max-height:440px;overflow:auto;}
+  .bubble{border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.4;}
+  .bubble.decision{background:#F1F6F5;border:1px solid var(--line);}
+  .receipt{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px;}
+  .receipt .tool{font-family:Consolas,monospace;font-weight:700;color:var(--tx);}
+  .badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px;color:#fff;}
+  .badge.ext{background:#8a5a1a;} .badge.int{background:#3a6ea5;} .badge.human{background:#7a4fa0;}
+  .hash{font-family:Consolas,monospace;font-size:11px;color:var(--slate);word-break:break-all;}
+  .statusbar{margin-top:14px;padding:12px 14px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;}
+  .statusbar a{color:#7fe3c0;}
+  .timeline .item{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:8px;}
+  .timeline .item.decline{border-left:4px solid var(--red);background:#FCECE9;}
+  .timeline .item.override{border-left:4px solid var(--amber);background:#FBF1E3;}
+  .timeline .item .top{display:flex;justify-content:space-between;font-size:12px;color:var(--slate);}
+  .timeline .item .body{margin-top:4px;font-size:13px;}
+  .check{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;margin-bottom:8px;font-size:14px;border:1px solid var(--line);}
+  .check .mark{width:24px;height:24px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:0 0 auto;}
+  .mark.ok{background:var(--green);} .mark.xx{background:var(--red);}
+  .banner{padding:14px 16px;border-radius:8px;font-weight:700;font-size:16px;margin-top:8px;}
+  .banner.ok{background:#E7F3EE;color:var(--green);border:1px solid var(--green);}
+  .banner.bad{background:#FCECE9;color:var(--red);border:1px solid var(--red);}
+  label{font-size:13px;color:var(--slate);display:block;margin:10px 0 4px;}
+  select,input[type=text]{width:100%;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
+  .row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+  .row>div{flex:1;min-width:160px;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);margin-top:12px;}
+  .hidden{display:none;}
+  .kvs{font-family:Consolas,monospace;font-size:12px;color:var(--slate);}
+</style>
+</head>
+<body>
+<header><div class="dot"></div><h1>AgentLedger</h1><span class="sub">provenance for agent tool calls</span></header>
+<nav>
+  <button data-tab="run" class="active">1 · Run</button>
+  <button data-tab="investigate">2 · Investigate</button>
+  <button data-tab="verify">3 · Verify</button>
+  <button data-tab="tamper">4 · Tamper</button>
+</nav>
+<main>
+  <!-- RUN -->
+  <section id="run" class="tab">
+    <div class="panel">
+      <h2>Watch the agent work</h2>
+      <p class="muted">The agent decides which tools to call. Every call and every decision is recorded at the boundary, on the right.</p>
+      <button class="action" id="runBtn">Run the agent</button>
+      <div class="cols" style="margin-top:16px;">
+        <div class="col"><h3>Agent activity</h3><div id="agentStream" class="stream"></div></div>
+        <div class="col"><h3>Receipts at the boundary</h3><div id="receiptStream" class="stream"></div></div>
+      </div>
+      <div id="runStatus" class="statusbar hidden"></div>
+    </div>
+  </section>
+  <!-- INVESTIGATE -->
+  <section id="investigate" class="tab hidden">
+    <div class="panel">
+      <h2>Six months later: what happened?</h2>
+      <p class="muted">Reconstructed from the sealed session. The DECLINE recommendation and the human override are highlighted.</p>
+      <button class="ghost" id="loadBtn">Load session</button>
+      <div id="sessionMeta" class="kvs" style="margin:12px 0;"></div>
+      <div id="timeline" class="timeline"></div>
+    </div>
+  </section>
+  <!-- VERIFY -->
+  <section id="verify" class="tab hidden">
+    <div class="panel">
+      <h2>Verify against the anchor</h2>
+      <p class="muted">Recompute everything and check it against the root committed on chain.</p>
+      <button class="action" id="verifyBtn">Verify</button>
+      <div id="verifyChecks" style="margin-top:16px;"></div>
+      <div id="verifyBanner"></div>
+      <div id="anchorInfo" class="statusbar hidden"></div>
+    </div>
+  </section>
+  <!-- TAMPER -->
+  <section id="tamper" class="tab hidden">
+    <div class="panel">
+      <h2>Tamper with the evidence</h2>
+      <p class="muted">Pick a record and change a field. Then verify. Change the score (naive) or rewrite the recommendation and re-seal (smart).</p>
+      <div class="row">
+        <div><label>Record</label><select id="tRecord"></select></div>
+        <div><label>Field (dot path)</label><input type="text" id="tPath" value="output.score"/></div>
+        <div><label>New value</label><input type="text" id="tValue" value="720"/></div>
+      </div>
+      <div class="chk"><input type="checkbox" id="tSmart"/><label for="tSmart" style="margin:0;color:var(--tx);">Smart: re-hash, re-chain, and re-seal locally</label></div>
+      <div style="margin-top:14px;display:flex;gap:10px;">
+        <button class="action" id="tamperBtn">Apply tamper &amp; verify</button>
+        <button class="ghost" id="restoreBtn">Restore</button>
+      </div>
+      <div id="tamperResult" style="margin-top:16px;"></div>
+    </div>
+  </section>
+</main>
+<script>
+const $=(s)=>document.querySelector(s);
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.querySelectorAll(".tab").forEach(t=>t.classList.add("hidden"));
+  $("#"+b.dataset.tab).classList.remove("hidden");
+});
+function badge(td){td=td||"";if(td.startsWith("external"))return '<span class="badge ext">'+td+'</span>';if(td.startsWith("human"))return '<span class="badge human">'+td+'</span>';return '<span class="badge int">'+td+'</span>';}
+
+// RUN
+$("#runBtn").onclick=()=>{
+  $("#agentStream").innerHTML="";$("#receiptStream").innerHTML="";
+  const st=$("#runStatus");st.classList.remove("hidden");st.textContent="Running...";
+  $("#runBtn").disabled=true;
+  const ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host);
+  ws.onopen=()=>ws.send(JSON.stringify({cmd:"run"}));
+  ws.onmessage=(m)=>{
+    const e=JSON.parse(m.data);
+    if(e.type==="decision"){const d=document.createElement("div");d.className="bubble decision";d.textContent=e.text;$("#agentStream").appendChild(d);$("#agentStream").scrollTop=1e9;}
+    if(e.type==="tool_call"){const d=document.createElement("div");d.className="receipt";d.innerHTML='<span class="tool">'+e.name+'</span>';$("#receiptStream").appendChild(d);$("#receiptStream").scrollTop=1e9;}
+    if(e.type==="tool_result"){const rs=$("#receiptStream").lastChild;if(rs)rs.innerHTML+=' <span class="hash">recorded</span>';}
+    if(e.type==="anchoring"){st.textContent="Sealing and anchoring the root to Arbitrum...";}
+    if(e.type==="done"){$("#runBtn").disabled=false;
+      let html="session sealed · "+e.sealed.recordCount+" records · root "+e.sealed.merkleRoot.slice(0,16)+"... · "+(e.verify.valid?"VERIFIED":"FAILED");
+      if(e.anchor)html+=' · <a href="'+e.anchor.explorer+'" target="_blank">view on Arbiscan</a>';
+      else html+=" · (not anchored: set .env)";
+      st.innerHTML=html;ws.close();}
+    if(e.type==="error"){$("#runBtn").disabled=false;st.textContent="Error: "+e.message;}
+  };
+};
+// INVESTIGATE
+$("#loadBtn").onclick=async()=>{
+  const s=await (await fetch("/api/session")).json();
+  if(!s){$("#timeline").innerHTML="<p class='muted'>No session yet. Run the agent first.</p>";return;}
+  $("#sessionMeta").innerHTML="session "+s.session.sessionId.slice(0,8)+" · "+s.session.recordCount+" records · root "+s.session.merkleRoot.slice(0,16)+"..."+(s.anchor?" · anchored on "+s.anchor.chain:"");
+  const tl=$("#timeline");tl.innerHTML="";
+  s.records.forEach(r=>{
+    const isDecline=r.actionType==="decision"&&/DECLINE/i.test(r.reasoning||"");
+    const isOverride=r.metadata?.tool==="request_approval";
+    const div=document.createElement("div");div.className="item"+(isDecline?" decline":"")+(isOverride?" override":"");
+    let title=r.actionType==="tool_call"?r.metadata.tool:"decision";
+    let body=r.actionType==="tool_call"?("in: "+JSON.stringify(r.input.args)+"  →  out: "+JSON.stringify(r.output)):(r.reasoning||"");
+    div.innerHTML='<div class="top"><span>#'+r.sequenceNumber+' · '+title+(r.metadata?badge(r.metadata.trustDomain):"")+'</span><span>'+(r.timestamp||"").slice(11,19)+'</span></div><div class="body">'+body+'</div>';
+    tl.appendChild(div);
+  });
+};
+// VERIFY
+async function doVerify(){
+  const r=await (await fetch("/api/verify",{method:"POST"})).json();
+  const c=$("#verifyChecks");c.innerHTML="";
+  r.checks.forEach(ch=>{const d=document.createElement("div");d.className="check";d.innerHTML='<div class="mark '+(ch.passed?"ok":"xx")+'">'+(ch.passed?"✓":"✕")+'</div><div><b>'+ch.name+'</b><br><span class="muted" style="margin:0">'+ch.detail+'</span></div>';c.appendChild(d);});
+  $("#verifyBanner").innerHTML='<div class="banner '+(r.valid?"ok":"bad")+'">'+(r.valid?"VERIFIED — intact and matches what was anchored":"TAMPER DETECTED — no longer matches what was anchored")+'</div>';
+  const ai=$("#anchorInfo");if(r.anchor){ai.classList.remove("hidden");ai.innerHTML="anchored on "+r.anchor.chain+" · root "+r.anchor.root.slice(0,18)+"..."+(r.anchor.explorer?' · <a href="'+r.anchor.explorer+'" target="_blank">Arbiscan</a>':"");}else ai.classList.add("hidden");
+  return r;
+}
+$("#verifyBtn").onclick=doVerify;
+// TAMPER
+async function loadRecords(){
+  const s=await (await fetch("/api/session")).json();const sel=$("#tRecord");sel.innerHTML="";
+  if(!s)return;s.records.forEach(r=>{const o=document.createElement("option");o.value=r.sequenceNumber;o.textContent="#"+r.sequenceNumber+" "+(r.metadata?.tool||r.actionType);sel.appendChild(o);});
+}
+$("#tRecord")&&loadRecords();
+$("#tamperBtn").onclick=async()=>{
+  const body={seq:Number($("#tRecord").value),path:$("#tPath").value,value:$("#tValue").value,smart:$("#tSmart").checked};
+  const t=await (await fetch("/api/tamper",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
+  if(t.error){$("#tamperResult").innerHTML='<div class="banner bad">'+t.error+'</div>';return;}
+  const v=await doVerifyInto("#tamperResult");
+};
+async function doVerifyInto(target){
+  const r=await (await fetch("/api/verify",{method:"POST"})).json();
+  let html="";r.checks.forEach(ch=>{html+='<div class="check"><div class="mark '+(ch.passed?"ok":"xx")+'">'+(ch.passed?"✓":"✕")+'</div><div><b>'+ch.name+'</b><br><span class="muted" style="margin:0">'+ch.detail+'</span></div></div>';});
+  html+='<div class="banner '+(r.valid?"ok":"bad")+'">'+(r.valid?"VERIFIED":"TAMPER DETECTED")+'</div>';
+  $(target).innerHTML=html;return r;
+}
+$("#restoreBtn").onclick=async()=>{await fetch("/api/restore",{method:"POST"});$("#tamperResult").innerHTML='<div class="banner ok">Restored to the original anchored session.</div>';loadRecords();};
+</script>
+</body>
+</html>

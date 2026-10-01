@@ -1,0 +1,12 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+const transport = new StdioClientTransport({ command: "node", args: ["servers/bureau-server.js"] });
+const client = new Client({ name: "agentledger-host", version: "0.1.0" });
+await client.connect(transport);
+const { tools } = await client.listTools();
+console.log("Discovered tools via tools/list:");
+for (const t of tools) console.log("   -", t.name, "->", t.description);
+const res = await client.callTool({ name: "get_credit_score", arguments: { customerId: "MER-100" } });
+console.log("\ntools/call get_credit_score { customerId: 'MER-100' }");
+console.log("   result:", res.content[0].text);
+await client.close();

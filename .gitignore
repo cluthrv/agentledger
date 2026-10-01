@@ -21,3 +21,9 @@ _local_backup/
 /.forceignore
 .vscode/
 .husky/
+
+# MCP demo
+.env
+.env.*
+mcp-demo/node_modules/
+mcp-demo/data/

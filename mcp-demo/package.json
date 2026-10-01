@@ -1,0 +1,30 @@
+{
+  "name": "agentledger-mcp",
+  "version": "0.2.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "hello": "node host/hello-client.js",
+    "tools": "node host/list-tools.js",
+    "scenario": "node host/run-fixed.js",
+    "agent": "node host/run-agent.js",
+    "record": "node host/run-record.js",
+    "deploy": "node contracts/deploy.js",
+    "verify": "node host/verify.js",
+    "tamper": "node host/tamper.js",
+    "prove": "node host/prove.js",
+    "restore": "node host/restore.js",
+    "ui": "node host/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@vluthra/agent-ledger": "^0.1.2",
+    "dotenv": "^16.4.0",
+    "ethers": "^6.17.0",
+    "express": "^4.19.0",
+    "jsforce": "^3.0.0",
+    "ws": "^8.18.0",
+    "zod": "^4.0.0"
+  }
+}

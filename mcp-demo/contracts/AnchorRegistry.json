@@ -1,0 +1,56 @@
+{
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "root",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "Anchored",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "root",
+          "type": "bytes32"
+        }
+      ],
+      "name": "anchor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "anchoredAt",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080604052348015600e575f5ffd5b506101668061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610034575f3560e01c80639591a61014610038578063eecdf92714610069575b5f5ffd5b610057610046366004610119565b5f6020819052908152604090205481565b60405190815260200160405180910390f35b61007c610077366004610119565b61007e565b005b5f81815260208190526040902054156100d05760405162461bcd60e51b815260206004820152601060248201526f185b1c9958591e48185b98da1bdc995960821b604482015260640160405180910390fd5b5f81815260208181526040918290204290819055915191825282917ffde54488b5523b3abf19b99976dd0e2c531fbcd233d0eb682c96c3a18cf6b3c1910160405180910390a250565b5f60208284031215610129575f5ffd5b503591905056fea2646970667358221220452c2b625a11b079b518ebe72f5df437a8efeec968e0b56c22943c6581fa3db864736f6c63430008250033"
+}
