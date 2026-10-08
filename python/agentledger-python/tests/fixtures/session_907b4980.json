@@ -1,0 +1,254 @@
+{
+  "session": {
+    "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+    "agentId": "sales-ops-agent",
+    "startTime": "2026-09-20T01:41:43.283Z",
+    "endTime": "2026-09-20T01:41:58.315Z",
+    "recordCount": 11,
+    "merkleRoot": "907b49800c0e4b0bd4bec90a8cb431fabd64ce928d6c612763bbf90c95739594",
+    "status": "verified",
+    "initiator": "demo-user",
+    "platform": "mcp"
+  },
+  "records": [
+    {
+      "id": "cc69ba82-55f6-44e1-88ba-02c1075250cf",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 0,
+      "timestamp": "2026-09-20T01:41:45.817Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "I'll gather the necessary information about this customer's account, credit score, and exposure/policy limits.",
+      "hash": "77e83456f7309b8f2b281111f9e024943c97af4110b58a79d519ef103bcc37da",
+      "previousHash": null
+    },
+    {
+      "id": "415cb605-74af-44b1-872d-ff0bcc1841d9",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 1,
+      "timestamp": "2026-09-20T01:41:45.827Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "get_account",
+        "args": {
+          "customerId": "MER-100"
+        }
+      },
+      "output": {
+        "accountId": "001XXMER100",
+        "name": "Meridian Industrial",
+        "tier": "Gold",
+        "currentBalance": 900000,
+        "recentPayments": "two 60-day-late in last quarter"
+      },
+      "metadata": {
+        "tool": "get_account",
+        "system": "crm",
+        "trustDomain": "external:salesforce"
+      },
+      "hash": "6500946f7ec4dfb4eb1d0c524c15345e39c85783d9ce9d919b890b97dd3fcb76",
+      "previousHash": "77e83456f7309b8f2b281111f9e024943c97af4110b58a79d519ef103bcc37da"
+    },
+    {
+      "id": "88c7d759-383b-41e0-92f6-3220811802e2",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 2,
+      "timestamp": "2026-09-20T01:41:45.833Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "get_credit_score",
+        "args": {
+          "customerId": "MER-100"
+        }
+      },
+      "output": {
+        "score": 580,
+        "previousQuarter": 690
+      },
+      "metadata": {
+        "tool": "get_credit_score",
+        "system": "bureau",
+        "trustDomain": "external:credit-bureau"
+      },
+      "hash": "43f150c44c5d01a8668c50d97170f859814cf97878f069c9a0f66697aecfd0af",
+      "previousHash": "6500946f7ec4dfb4eb1d0c524c15345e39c85783d9ce9d919b890b97dd3fcb76"
+    },
+    {
+      "id": "b6effa62-3519-4e72-be60-f2af471383c0",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 3,
+      "timestamp": "2026-09-20T01:41:45.838Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "get_exposure",
+        "args": {
+          "customerId": "MER-100",
+          "requestedLine": 2400000
+        }
+      },
+      "output": {
+        "currentBalance": 900000,
+        "policyLimit": 2000000,
+        "requestedLine": 2400000,
+        "overLimit": true
+      },
+      "metadata": {
+        "tool": "get_exposure",
+        "system": "finance",
+        "trustDomain": "internal:finance"
+      },
+      "hash": "262602e54e268ad967916bbb529a585160ef0546c114f5ab36284d05255bb525",
+      "previousHash": "43f150c44c5d01a8668c50d97170f859814cf97878f069c9a0f66697aecfd0af"
+    },
+    {
+      "id": "272c7e2b-ea57-4fcf-96d8-4cad938617f4",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 4,
+      "timestamp": "2026-09-20T01:41:47.677Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "Now let me check the policy decision based on this data.",
+      "hash": "01543bd46032ee4e1092597d0bf832841f279e724936611cb6050b3dda853761",
+      "previousHash": "262602e54e268ad967916bbb529a585160ef0546c114f5ab36284d05255bb525"
+    },
+    {
+      "id": "23cbf527-88ce-4885-bb48-f614b46f2df8",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 5,
+      "timestamp": "2026-09-20T01:41:47.711Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "check_credit_policy",
+        "args": {
+          "score": 580,
+          "requestedLine": 2400000,
+          "policyLimit": 2000000
+        }
+      },
+      "output": {
+        "scoreThreshold": 650,
+        "policyLimit": 2000000,
+        "recommendation": "decline",
+        "reasons": [
+          "score 580 below 650",
+          "requested $2,400,000 over $2,000,000 limit"
+        ],
+        "exceptionRequiresApproval": true,
+        "approverRole": "VP"
+      },
+      "metadata": {
+        "tool": "check_credit_policy",
+        "system": "policy",
+        "trustDomain": "internal:policy"
+      },
+      "hash": "a8c8b744e612ddec1151a5d70a171973e4d504557e12b6af9cfa0ab1607d94fe",
+      "previousHash": "01543bd46032ee4e1092597d0bf832841f279e724936611cb6050b3dda853761"
+    },
+    {
+      "id": "723cc23f-0987-414b-88da-c8f3ed3c1e8d",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 6,
+      "timestamp": "2026-09-20T01:41:53.046Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {
+        "score": 720
+      },
+      "reasoning": "## Recommendation: **DECLINE**\n\n**Reasons:**\n- Credit score has dropped sharply from 690 to **580**, below the 650 policy threshold.\n- Recent payment history shows **two 60-day-late payments** last quarter — a red flag.\n- Requested line of $2,400,000 exceeds the policy limit of $2,000,000 by $400,000.\n- Current balance is already $900,000, adding to exposure risk.\n\nThis is a policy exception (declined by policy, and requires approval per system rules). Per protocol, I'll route this to a VP for approval before taking any further action.",
+      "hash": "75fc25694781555ec674a0f3fa69718eeb2e8633cf25a4c7bda74915607ecd90",
+      "previousHash": "a8c8b744e612ddec1151a5d70a171973e4d504557e12b6af9cfa0ab1607d94fe"
+    },
+    {
+      "id": "39d27482-a0c3-4ca2-9410-8841b71b975e",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 7,
+      "timestamp": "2026-09-20T01:41:53.056Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "request_approval",
+        "args": {
+          "customerId": "MER-100",
+          "requestedLine": 2400000,
+          "reason": "Policy recommends DECLINE: credit score 580 (below 650 threshold, down from 690 last quarter), two 60-day-late payments in last quarter, and requested $2,400,000 exceeds policy limit of $2,000,000 by $400,000. Current balance $900,000. Requires VP override to proceed."
+        }
+      },
+      "output": {
+        "approvalId": "APR-9382",
+        "approver": "VP-Sales (MGR-173)",
+        "decision": "APPROVED",
+        "note": "Override approved: strategic account, relationship priority"
+      },
+      "metadata": {
+        "tool": "request_approval",
+        "system": "approval",
+        "trustDomain": "human:approval"
+      },
+      "hash": "ea56ade53d1f5a47f210d059b3f244280f2406b3634c48ddcc432de94698bd57",
+      "previousHash": "75fc25694781555ec674a0f3fa69718eeb2e8633cf25a4c7bda74915607ecd90"
+    },
+    {
+      "id": "e5257114-25d8-4498-97f8-4aa7807d039a",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 8,
+      "timestamp": "2026-09-20T01:41:55.330Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "A VP has **APPROVED** an override (Approval ID: APR-9382), citing strategic account/relationship priority despite the policy flags. Proceeding to create the credit line per this approval.",
+      "hash": "d7d4e252e7bfb109fe2c438d39568efae9625f2eda8692fda6b18ae2a02ff0c4",
+      "previousHash": "ea56ade53d1f5a47f210d059b3f244280f2406b3634c48ddcc432de94698bd57"
+    },
+    {
+      "id": "78da7f1c-4148-4cf1-9eb5-973580ef9fba",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 9,
+      "timestamp": "2026-09-20T01:41:55.334Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "create_credit_line",
+        "args": {
+          "customerId": "MER-100",
+          "amount": 2400000,
+          "approvalId": "APR-9382"
+        }
+      },
+      "output": {
+        "creditLineId": "CL-5678",
+        "customerId": "MER-100",
+        "amount": 2400000,
+        "approvalId": "APR-9382",
+        "status": "active"
+      },
+      "metadata": {
+        "tool": "create_credit_line",
+        "system": "crm",
+        "trustDomain": "external:salesforce"
+      },
+      "hash": "edcfab95d687f83c08761468f45e0940b87fc5bb215d2da7a59f49f6b871a86b",
+      "previousHash": "d7d4e252e7bfb109fe2c438d39568efae9625f2eda8692fda6b18ae2a02ff0c4"
+    },
+    {
+      "id": "deeedf06-ef42-4a4f-be35-e3015e8d8580",
+      "sessionId": "3632c15e-ef1b-4df5-962b-910c8bbabd95",
+      "sequenceNumber": 10,
+      "timestamp": "2026-09-20T01:41:58.315Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "## Summary\n\n- **System/policy recommendation:** DECLINE (score 580 < 650 threshold, delinquent payment history, $2.4M request exceeds $2M policy limit)\n- **Outcome:** VP (MGR-173) issued an override approval (APR-9382) citing strategic account priority\n- **Action taken:** Credit line **CL-5678** created for Meridian Industrial (MER-100) at **$2,400,000**, status: active\n\nNote: This was approved as an exception against standard policy guidance — flagging for awareness given the declining credit score and recent late payments.",
+      "hash": "2992e4befa08ced171643f22f06e9c83d81011957bd4e21e15a1466466bc196b",
+      "previousHash": "edcfab95d687f83c08761468f45e0940b87fc5bb215d2da7a59f49f6b871a86b"
+    }
+  ],
+  "anchor": {
+    "chain": "arbitrum-sepolia",
+    "contract": "0x0B2c6114FfA5DcB5C78620C15e35C53391DC46Aa",
+    "root": "0x907b49800c0e4b0bd4bec90a8cb431fabd64ce928d6c612763bbf90c95739594",
+    "txHash": "0x5fcb724e1a9f8ff8d912ecade1b57004df7b93065b64b708d525102c8f9ce76e",
+    "blockNumber": 310717611,
+    "anchoredAt": 1789868519,
+    "explorer": "https://sepolia.arbiscan.io/tx/0x5fcb724e1a9f8ff8d912ecade1b57004df7b93065b64b708d525102c8f9ce76e"
+  }
+}

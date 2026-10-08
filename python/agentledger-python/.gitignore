@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node (only used by examples/cross_language)
+node_modules/
+package-lock.json
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

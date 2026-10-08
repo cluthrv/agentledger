@@ -1,0 +1,83 @@
+{
+  "session": {
+    "sessionId": "f5ef38cf-af24-45dd-98bf-7604be8f06d5",
+    "agentId": "ts-golden-agent",
+    "startTime": "2026-10-08T01:46:56.944Z",
+    "endTime": "2026-10-08T01:46:56.947Z",
+    "recordCount": 3,
+    "merkleRoot": "15660742944659466883e0fea531da2a1ff4964b05c6003f1d877874a3851d26",
+    "status": "sealed",
+    "initiator": "xlang-golden",
+    "platform": "mcp"
+  },
+  "records": [
+    {
+      "id": "0a808020-242e-4217-a2c4-a026319575e5",
+      "sessionId": "f5ef38cf-af24-45dd-98bf-7604be8f06d5",
+      "sequenceNumber": 0,
+      "timestamp": "2026-10-08T01:46:56.946Z",
+      "agentId": "ts-golden-agent",
+      "actionType": "query",
+      "input": {
+        "query": "lookup",
+        "args": {
+          "id": "ACC-9",
+          "qty": 200
+        }
+      },
+      "output": {
+        "tier": "Gold",
+        "basePrice": 149,
+        "rate": 0.3333333333333333
+      },
+      "reasoning": "base price + tier",
+      "hash": "841e6db8d8eff07498e5dca98f867a056d3f00ee97e851db17e5d4c6752928db",
+      "previousHash": null
+    },
+    {
+      "id": "ca61d822-6009-40e9-9648-98eee2147dc2",
+      "sessionId": "f5ef38cf-af24-45dd-98bf-7604be8f06d5",
+      "sequenceNumber": 1,
+      "timestamp": "2026-10-08T01:46:56.946Z",
+      "agentId": "ts-golden-agent",
+      "actionType": "calculation",
+      "input": {
+        "basePrice": 149,
+        "discountPct": 15
+      },
+      "output": {
+        "finalPrice": 126.65,
+        "big": 1e+21,
+        "small": 1e-7,
+        "zero": 0,
+        "neg": -3
+      },
+      "reasoning": "applied discount",
+      "metadata": {
+        "system": "cpq",
+        "trustDomain": "internal:pricing"
+      },
+      "hash": "6bae20f09e7dfa7936f5e9028ecf7f85cae3820dc6c0bf77d2203b388da1976a",
+      "previousHash": "841e6db8d8eff07498e5dca98f867a056d3f00ee97e851db17e5d4c6752928db"
+    },
+    {
+      "id": "6e051ffd-170c-41df-a664-2093cc893537",
+      "sessionId": "f5ef38cf-af24-45dd-98bf-7604be8f06d5",
+      "sequenceNumber": 2,
+      "timestamp": "2026-10-08T01:46:56.946Z",
+      "agentId": "ts-golden-agent",
+      "actionType": "create",
+      "input": {
+        "accountId": "ACC-9",
+        "price": 126.65
+      },
+      "output": {
+        "quoteId": "Q-9",
+        "status": "draft"
+      },
+      "reasoning": "draft quote",
+      "hash": "35fed5d10e5eb3a3d5d71ef4c4c130041442a362db4e38ea120977547f0d1b07",
+      "previousHash": "6bae20f09e7dfa7936f5e9028ecf7f85cae3820dc6c0bf77d2203b388da1976a"
+    }
+  ]
+}
