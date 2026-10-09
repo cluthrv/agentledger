@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 import Anthropic from "@anthropic-ai/sdk";
 import { connectAll } from "./mcp-client.js";
+import { RECEIPT_META_KEY } from "./keys.js";
 
 export const MODEL = "claude-sonnet-5";
 export const CUSTOMER = "MER-100";
@@ -60,11 +61,15 @@ export async function runAgent({ anthropic, onEvent, host } = {}) {
         if (block.type !== "tool_use") continue;
         emit({ type: "tool_call", name: block.name, input: block.input });
         console.log(`  -> ${block.name}(${JSON.stringify(block.input)})`);
-        let result;
-        try { result = await host.call(block.name, block.input); }
+        let result, receipt;
+        try {
+          const raw = await host.callTool(block.name, block.input);
+          result = JSON.parse(raw.content[0].text);
+          receipt = raw._meta?.[RECEIPT_META_KEY]; // present when the gateway is in the path
+        }
         catch (e) { result = { error: String(e.message || e) }; }
         console.log(`     ${JSON.stringify(result)}`);
-        emit({ type: "tool_result", name: block.name, output: result });
+        emit({ type: "tool_result", name: block.name, output: result, receipt });
         toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
       }
       messages.push({ role: "user", content: toolResults });

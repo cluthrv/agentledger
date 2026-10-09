@@ -28,13 +28,17 @@ export async function connectAll() {
     for (const t of tools) { toolOwner[t.name] = s.key; allTools.push({ ...t, server: s.key }); }
   }
 
+  async function callTool(name, args) {
+    const key = toolOwner[name];
+    if (!key) throw new Error(`No server owns tool: ${name}`);
+    return clients[key].callTool({ name, arguments: args });
+  }
+
   return {
     allTools,
+    callTool, // the raw MCP CallToolResult, including any _meta
     async call(name, args) {
-      const key = toolOwner[name];
-      if (!key) throw new Error(`No server owns tool: ${name}`);
-      const res = await clients[key].callTool({ name, arguments: args });
-      return JSON.parse(res.content[0].text);
+      return JSON.parse((await callTool(name, args)).content[0].text);
     },
     async closeAll() { for (const k of Object.keys(clients)) await clients[k].close(); },
   };

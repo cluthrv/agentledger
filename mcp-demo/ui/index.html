@@ -29,6 +29,10 @@
   .bubble.decision{background:#F1F6F5;border:1px solid var(--line);}
   .receipt{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px;}
   .receipt .tool{font-family:Consolas,monospace;font-weight:700;color:var(--tx);}
+  .approval{border:1px solid var(--amber);border-left:4px solid var(--amber);background:#FBF1E3;border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:13px;line-height:1.45;}
+  .htag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.5px;color:#fff;background:var(--amber);padding:2px 8px;border-radius:10px;}
+  .approval .dec{font-weight:700;color:var(--amber);}
+  .sim{color:var(--slate);font-size:11px;font-style:italic;}
   .badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px;color:#fff;}
   .badge.ext{background:#8a5a1a;} .badge.int{background:#3a6ea5;} .badge.human{background:#7a4fa0;}
   .hash{font-family:Consolas,monospace;font-size:11px;color:var(--slate);word-break:break-all;}
@@ -41,10 +45,11 @@
   .timeline .item .body{margin-top:4px;font-size:13px;}
   .check{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:7px;margin-bottom:8px;font-size:14px;border:1px solid var(--line);}
   .check .mark{width:24px;height:24px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:0 0 auto;}
-  .mark.ok{background:var(--green);} .mark.xx{background:var(--red);}
+  .mark.ok{background:var(--green);} .mark.xx{background:var(--red);} .mark.unk{background:var(--amber);}
   .banner{padding:14px 16px;border-radius:8px;font-weight:700;font-size:16px;margin-top:8px;}
   .banner.ok{background:#E7F3EE;color:var(--green);border:1px solid var(--green);}
   .banner.bad{background:#FCECE9;color:var(--red);border:1px solid var(--red);}
+  .banner.warn{background:#FBF1E3;color:var(--amber);border:1px solid var(--amber);}
   label{font-size:13px;color:var(--slate);display:block;margin:10px 0 4px;}
   select,input[type=text]{width:100%;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:14px;}
   .row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
@@ -67,7 +72,7 @@
   <section id="run" class="tab">
     <div class="panel">
       <h2>Watch the agent work</h2>
-      <p class="muted">The agent decides which tools to call. Every call and every decision is recorded at the boundary, on the right.</p>
+      <p class="muted">The agent decides which tools to call. Every call and every reasoning step is recorded at the boundary.</p>
       <button class="action" id="runBtn">Run the agent</button>
       <div class="cols" style="margin-top:16px;">
         <div class="col"><h3>Agent activity</h3><div id="agentStream" class="stream"></div></div>
@@ -90,7 +95,7 @@
   <section id="verify" class="tab hidden">
     <div class="panel">
       <h2>Verify against the anchor</h2>
-      <p class="muted">Recompute everything and check it against the root committed on chain.</p>
+      <p class="muted">Recompute everything and check it against sources the session file can't rewrite: the root committed on chain, the gateway's pinned key, and the bureau's pinned key.</p>
       <button class="action" id="verifyBtn">Verify</button>
       <div id="verifyChecks" style="margin-top:16px;"></div>
       <div id="verifyBanner"></div>
@@ -101,13 +106,17 @@
   <section id="tamper" class="tab hidden">
     <div class="panel">
       <h2>Tamper with the evidence</h2>
-      <p class="muted">Pick a record and change a field. Then verify. Change the score (naive) or rewrite the recommendation and re-seal (smart).</p>
+      <p class="muted">Pick a record and change a field. Then verify. Each mode is a stronger attacker: naive edits the field, smart also re-seals, forge rewrites everything in the file (anchor copy and signatures included).</p>
       <div class="row">
         <div><label>Record</label><select id="tRecord"></select></div>
         <div><label>Field (dot path)</label><input type="text" id="tPath" value="output.score"/></div>
         <div><label>New value</label><input type="text" id="tValue" value="720"/></div>
       </div>
-      <div class="chk"><input type="checkbox" id="tSmart"/><label for="tSmart" style="margin:0;color:var(--tx);">Smart: re-hash, re-chain, and re-seal locally</label></div>
+      <div class="row" style="margin-top:4px;"><div><label>Attacker</label><select id="tMode">
+        <option value="naive">Naive: change the field, leave the hash</option>
+        <option value="smart">Smart: re-hash, re-chain, and re-seal locally</option>
+        <option value="forge">Forge: rewrite everything in the file, re-sign with own key</option>
+      </select></div></div>
       <div style="margin-top:14px;display:flex;gap:10px;">
         <button class="action" id="tamperBtn">Apply tamper &amp; verify</button>
         <button class="ghost" id="restoreBtn">Restore</button>
@@ -126,6 +135,17 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 });
 function badge(td){td=td||"";if(td.startsWith("external"))return '<span class="badge ext">'+td+'</span>';if(td.startsWith("human"))return '<span class="badge human">'+td+'</span>';return '<span class="badge int">'+td+'</span>';}
 
+// Build the human-approval card shown when the VP (simulated) acts on the escalation.
+function approvalCardHTML(o){
+  o=o||{};
+  return '<span class="htag">HUMAN DECISION</span><br>'+
+    'Routed to <b>'+(o.approver||'reviewer')+'</b> for review.<br>'+
+    'Decision: <span class="dec">'+(o.decision||'')+'</span> — overriding the agent\'s DECLINE recommendation.'+
+    (o.note?('<br><span class="muted" style="margin:0">'+o.note+'</span>'):'')+
+    (o.approvalId?('<br>Approval '+o.approvalId):'')+
+    '<br><span class="sim">approval simulated for this demo</span>';
+}
+
 // RUN
 $("#runBtn").onclick=()=>{
   $("#agentStream").innerHTML="";$("#receiptStream").innerHTML="";
@@ -137,11 +157,19 @@ $("#runBtn").onclick=()=>{
     const e=JSON.parse(m.data);
     if(e.type==="decision"){const d=document.createElement("div");d.className="bubble decision";d.textContent=e.text;$("#agentStream").appendChild(d);$("#agentStream").scrollTop=1e9;}
     if(e.type==="tool_call"){const d=document.createElement("div");d.className="receipt";d.innerHTML='<span class="tool">'+e.name+'</span>';$("#receiptStream").appendChild(d);$("#receiptStream").scrollTop=1e9;}
-    if(e.type==="tool_result"){const rs=$("#receiptStream").lastChild;if(rs)rs.innerHTML+=' <span class="hash">recorded</span>';}
-    if(e.type==="anchoring"){st.textContent="Sealing and anchoring the root to Arbitrum...";}
+    if(e.type==="tool_result"){const rs=$("#receiptStream").lastChild;if(rs)rs.innerHTML+=e.receipt?' <span class="hash">#'+e.receipt.seq+' · '+e.receipt.hash.slice(0,12)+'… · signed '+e.receipt.keyId.slice(0,8)+'</span>':' <span class="hash">recorded</span>';}
+    // Human approval beat: surface the (simulated) VP override as a distinct human step.
+    if(e.type==="tool_result"&&e.name==="request_approval"){
+      const c=document.createElement("div");c.className="approval";c.innerHTML=approvalCardHTML(e.output);
+      $("#agentStream").appendChild(c);$("#agentStream").scrollTop=1e9;
+    }
+    if(e.type==="anchoring"){st.textContent=e.backend==="rehearsal"?"Sealing and anchoring the root (offline rehearsal registry)...":"Sealing and anchoring the root to Arbitrum...";}
+    if(e.type==="anchor_error"){st.textContent="Anchoring failed: "+e.message;}
     if(e.type==="done"){$("#runBtn").disabled=false;
       let html="session sealed · "+e.sealed.recordCount+" records · root "+e.sealed.merkleRoot.slice(0,16)+"... · "+(e.verify.valid?"VERIFIED":"FAILED");
-      if(e.anchor)html+=' · <a href="'+e.anchor.explorer+'" target="_blank">view on Arbiscan</a>';
+      if(e.anchor&&e.anchor.explorer)html+=' · <a href="'+e.anchor.explorer+'" target="_blank">view on Arbiscan</a>';
+      else if(e.anchor)html+=" · anchored in "+e.anchor.chain;
+      else if(e.anchorError)html+=' · <span style="color:#ffb3a7">anchoring FAILED: '+e.anchorError+'</span>';
       else html+=" · (not anchored: set .env)";
       st.innerHTML=html;ws.close();}
     if(e.type==="error"){$("#runBtn").disabled=false;st.textContent="Error: "+e.message;}
@@ -154,42 +182,66 @@ $("#loadBtn").onclick=async()=>{
   $("#sessionMeta").innerHTML="session "+s.session.sessionId.slice(0,8)+" · "+s.session.recordCount+" records · root "+s.session.merkleRoot.slice(0,16)+"..."+(s.anchor?" · anchored on "+s.anchor.chain:"");
   const tl=$("#timeline");tl.innerHTML="";
   s.records.forEach(r=>{
+    const isApproval=r.actionType==="tool_call"&&r.metadata&&r.metadata.tool==="request_approval";
     const isDecline=r.actionType==="decision"&&/DECLINE/i.test(r.reasoning||"");
-    const isOverride=r.metadata?.tool==="request_approval";
-    const div=document.createElement("div");div.className="item"+(isDecline?" decline":"")+(isOverride?" override":"");
-    let title=r.actionType==="tool_call"?r.metadata.tool:"decision";
-    let body=r.actionType==="tool_call"?("in: "+JSON.stringify(r.input.args)+"  →  out: "+JSON.stringify(r.output)):(r.reasoning||"");
+    const div=document.createElement("div");div.className="item"+(isDecline?" decline":"")+(isApproval?" override":"");
+    let title,body;
+    if(isApproval){
+      title="human approval";
+      body=approvalCardHTML(r.output);
+    } else if(r.actionType==="tool_call"){
+      title=r.metadata.tool;
+      body="in: "+JSON.stringify(r.input.args)+"  →  out: "+JSON.stringify(r.output);
+    } else {
+      title="reasoning";
+      body=r.reasoning||"";
+    }
     div.innerHTML='<div class="top"><span>#'+r.sequenceNumber+' · '+title+(r.metadata?badge(r.metadata.trustDomain):"")+'</span><span>'+(r.timestamp||"").slice(11,19)+'</span></div><div class="body">'+body+'</div>';
     tl.appendChild(div);
   });
 };
 // VERIFY
+const MARK={ok:["ok","✓"],xx:["xx","✕"],unk:["unk","?"]};
+const BANNER={
+  verified:["ok","VERIFIED — intact, signed by the gateway, and matches the independent anchor"],
+  "intact-unanchored":["warn","INTACT — but not checked against an independent anchor"],
+  tampered:["bad","TAMPER DETECTED — no longer matches what was signed and anchored"],
+  unavailable:["warn","COULD NOT VERIFY — the anchor source was unreachable"],
+};
+function checksHTML(r){
+  let html="";
+  r.checks.forEach(ch=>{const m=MARK[ch.passed?"ok":ch.unavailable?"unk":"xx"];html+='<div class="check"><div class="mark '+m[0]+'">'+m[1]+'</div><div><b>'+ch.name+'</b><br><span class="muted" style="margin:0">'+ch.detail+'</span></div></div>';});
+  const b=BANNER[r.status]||BANNER.tampered;
+  return html+'<div class="banner '+b[0]+'">'+b[1]+'</div>';
+}
+async function fetchVerify(){
+  const res=await fetch("/api/verify",{method:"POST"});const r=await res.json();
+  if(r.error)throw new Error(r.error);return r;
+}
 async function doVerify(){
-  const r=await (await fetch("/api/verify",{method:"POST"})).json();
-  const c=$("#verifyChecks");c.innerHTML="";
-  r.checks.forEach(ch=>{const d=document.createElement("div");d.className="check";d.innerHTML='<div class="mark '+(ch.passed?"ok":"xx")+'">'+(ch.passed?"✓":"✕")+'</div><div><b>'+ch.name+'</b><br><span class="muted" style="margin:0">'+ch.detail+'</span></div>';c.appendChild(d);});
-  $("#verifyBanner").innerHTML='<div class="banner '+(r.valid?"ok":"bad")+'">'+(r.valid?"VERIFIED — intact and matches what was anchored":"TAMPER DETECTED — no longer matches what was anchored")+'</div>';
-  const ai=$("#anchorInfo");if(r.anchor){ai.classList.remove("hidden");ai.innerHTML="anchored on "+r.anchor.chain+" · root "+r.anchor.root.slice(0,18)+"..."+(r.anchor.explorer?' · <a href="'+r.anchor.explorer+'" target="_blank">Arbiscan</a>':"");}else ai.classList.add("hidden");
+  let r;try{r=await fetchVerify();}catch(e){$("#verifyChecks").innerHTML='<div class="banner bad">'+e.message+'</div>';return;}
+  $("#verifyChecks").innerHTML=checksHTML(r);$("#verifyBanner").innerHTML="";
+  const ai=$("#anchorInfo");
+  if(r.onChain){ai.classList.remove("hidden");ai.innerHTML="read from "+(r.onChain.backend==="rehearsal"?"the rehearsal registry":"chain")+" · root "+r.onChain.root.slice(0,18)+"... · anchored "+new Date(r.onChain.anchoredAt*1000).toISOString()+(r.anchor&&r.anchor.explorer?' · <a href="'+r.anchor.explorer+'" target="_blank">Arbiscan</a>':"");}
+  else ai.classList.add("hidden");
   return r;
 }
 $("#verifyBtn").onclick=doVerify;
 // TAMPER
 async function loadRecords(){
   const s=await (await fetch("/api/session")).json();const sel=$("#tRecord");sel.innerHTML="";
-  if(!s)return;s.records.forEach(r=>{const o=document.createElement("option");o.value=r.sequenceNumber;o.textContent="#"+r.sequenceNumber+" "+(r.metadata?.tool||r.actionType);sel.appendChild(o);});
+  if(!s)return;s.records.forEach(r=>{const o=document.createElement("option");o.value=r.sequenceNumber;o.textContent="#"+r.sequenceNumber+" "+(r.metadata?.tool||(r.actionType==="decision"?"reasoning":r.actionType));sel.appendChild(o);});
 }
 $("#tRecord")&&loadRecords();
 $("#tamperBtn").onclick=async()=>{
-  const body={seq:Number($("#tRecord").value),path:$("#tPath").value,value:$("#tValue").value,smart:$("#tSmart").checked};
+  const body={seq:Number($("#tRecord").value),path:$("#tPath").value,value:$("#tValue").value,mode:$("#tMode").value};
   const t=await (await fetch("/api/tamper",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)})).json();
   if(t.error){$("#tamperResult").innerHTML='<div class="banner bad">'+t.error+'</div>';return;}
   const v=await doVerifyInto("#tamperResult");
 };
 async function doVerifyInto(target){
-  const r=await (await fetch("/api/verify",{method:"POST"})).json();
-  let html="";r.checks.forEach(ch=>{html+='<div class="check"><div class="mark '+(ch.passed?"ok":"xx")+'">'+(ch.passed?"✓":"✕")+'</div><div><b>'+ch.name+'</b><br><span class="muted" style="margin:0">'+ch.detail+'</span></div></div>';});
-  html+='<div class="banner '+(r.valid?"ok":"bad")+'">'+(r.valid?"VERIFIED":"TAMPER DETECTED")+'</div>';
-  $(target).innerHTML=html;return r;
+  let r;try{r=await fetchVerify();}catch(e){$(target).innerHTML='<div class="banner bad">'+e.message+'</div>';return;}
+  $(target).innerHTML=checksHTML(r);return r;
 }
 $("#restoreBtn").onclick=async()=>{await fetch("/api/restore",{method:"POST"});$("#tamperResult").innerHTML='<div class="banner ok">Restored to the original anchored session.</div>';loadRecords();};
 </script>

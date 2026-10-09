@@ -1,16 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// Minimal anchor: records the block time at which a Merkle root was committed.
-/// Content-discoverable: given a root, anyone can read anchoredAt(root) with no
-/// pointer stored anywhere off-chain. The indexed event also lets you find it by log.
+/// Anchors one Merkle root per (anchorer, session). Write-once: a session can't
+/// be re-anchored, and because the slot is keyed by msg.sender, nobody else can
+/// claim or squat on a session's slot. A verifier pins the anchorer address it
+/// trusts (the gateway's wallet) and reads anchors(anchorer, sessionId) - so a
+/// forged session file can't point the verifier at a root of the forger's choosing.
 contract AnchorRegistry {
-    mapping(bytes32 => uint256) public anchoredAt; // root -> block timestamp
-    event Anchored(bytes32 indexed root, uint256 timestamp);
+    struct Anchor {
+        bytes32 root;
+        uint64 anchoredAt; // block timestamp
+    }
 
-    function anchor(bytes32 root) external {
-        require(anchoredAt[root] == 0, "already anchored");
-        anchoredAt[root] = block.timestamp;
-        emit Anchored(root, block.timestamp);
+    mapping(address => mapping(bytes32 => Anchor)) public anchors; // anchorer -> sessionId -> anchor
+
+    event Anchored(address indexed anchorer, bytes32 indexed sessionId, bytes32 indexed root, uint256 timestamp);
+
+    function anchor(bytes32 sessionId, bytes32 root) external {
+        require(root != bytes32(0), "empty root");
+        require(anchors[msg.sender][sessionId].anchoredAt == 0, "session already anchored");
+        anchors[msg.sender][sessionId] = Anchor(root, uint64(block.timestamp));
+        emit Anchored(msg.sender, sessionId, root, block.timestamp);
     }
 }

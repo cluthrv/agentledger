@@ -41,7 +41,13 @@ from .types import (
     VerificationCheck,
     VerificationResult,
 )
-from .verification import load_records, verify_exported_session
+from .verification import (
+    OnChainAnchor,
+    load_records,
+    read_onchain_anchor,
+    session_id_to_bytes32,
+    verify_exported_session,
+)
 
 __version__ = "0.1.0"
 
@@ -67,6 +73,9 @@ __all__ = [
     "generate_merkle_proof",
     "verify_merkle_proof",
     "verify_exported_session",
+    "OnChainAnchor",
+    "read_onchain_anchor",
+    "session_id_to_bytes32",
     "load_records",
     "__version__",
 ]

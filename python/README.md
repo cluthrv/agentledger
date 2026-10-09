@@ -60,7 +60,20 @@ for check in result.checks:
 print("Overall:", result.valid)
 ```
 
-When the document carries an `anchor` block, `verify_exported_session` also checks that the recomputed Merkle root matches the anchored on-chain root.
+When the document carries an `anchor` block, `verify_exported_session` also checks that the recomputed Merkle root matches the root cached in that block. That cached copy is not independent: whoever can edit the records can edit it too. To check against the chain itself, pass the anchor source from your own configuration:
+
+```python
+from agentledger import OnChainAnchor, verify_exported_session
+
+onchain = OnChainAnchor(
+    rpc_url="https://sepolia-rollup.arbitrum.io/rpc",
+    contract="0x...",                   # the AnchorRegistry address
+    trusted_anchorers=["0x..."],        # the gateway wallet(s) you trust
+)
+result = verify_exported_session(doc, onchain=onchain)
+```
+
+This adds an `anchored_root_onchain` check that reads the root anchored for this session id by a trusted address (stdlib only, one `eth_call`). It fails closed if the chain can't be reached.
 
 ## API
 
@@ -83,7 +96,7 @@ When the document carries an `anchor` block, `verify_exported_session` also chec
 
 ### Low-level utilities
 
-`sha256`, `hash_action_record`, `combine_hashes`, `sorted_stringify`, `compute_merkle_root`, `generate_merkle_proof`, `verify_merkle_proof`, `verify_chain`, `verify_action_record`, `verify_exported_session`.
+`sha256`, `hash_action_record`, `combine_hashes`, `sorted_stringify`, `compute_merkle_root`, `generate_merkle_proof`, `verify_merkle_proof`, `verify_chain`, `verify_action_record`, `verify_exported_session`, `OnChainAnchor`, `read_onchain_anchor`, `session_id_to_bytes32`.
 
 ## Cross-language equivalence
 

@@ -1,5 +1,4 @@
 import "dotenv/config";
-import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +8,7 @@ import { connectAll } from "./mcp-client.js";
 import { startSession } from "./ledger.js";
 import { withLedger } from "./gateway.js";
 import { runAgent } from "./agent.js";
-import { anchoringConfigured, anchorRoot } from "./anchor.js";
+import { sealAndAnchor } from "./finalize.js";
 import { verifySession } from "./verify.js";
 import { getSession, tamperSession, restoreSession, proveRecord } from "./ops.js";
 import { makeMockModel } from "./mock-model.js";
@@ -20,7 +19,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "ui")));
 
 app.get("/api/session", (req, res) => res.json(getSession()));
-app.post("/api/verify", (req, res) => res.json(verifySession()));
+app.post("/api/verify", async (req, res) => { try { res.json(await verifySession()); } catch (e) { res.status(400).json({ error: e.message }); } });
 app.post("/api/tamper", (req, res) => { try { res.json(tamperSession(req.body)); } catch (e) { res.status(400).json({ error: e.message }); } });
 app.post("/api/restore", (req, res) => { try { restoreSession(); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); } });
 app.post("/api/prove", (req, res) => { try { res.json(proveRecord(req.body.seq)); } catch (e) { res.status(400).json({ error: e.message }); } });
@@ -39,24 +38,10 @@ wss.on("connection", (ws) => {
       const mock = process.env.DEMO_MOCK === "1";
       send({ type: "start", mock });
       await runAgent({ host, anthropic: mock ? makeMockModel() : undefined, onEvent: send });
-      const sealed = session.seal();
-      const v = session.verify();
-      const exp = session.export();
-      let anchor = null;
-      if (anchoringConfigured()) {
-        send({ type: "anchoring" });
-        try { anchor = await anchorRoot(sealed.merkleRoot); exp.anchor = anchor; }
-        catch (e) { send({ type: "anchor_error", message: e.message }); }
-      } else if (mock) {
-        // Rehearsal anchor: a fixed reference so the smart-tamper catch works offline.
-        anchor = { chain: "arbitrum-sepolia (rehearsal)", root: "0x" + sealed.merkleRoot, anchoredAt: Math.floor(Date.now() / 1000), txHash: "0xREHEARSAL", explorer: null };
-        exp.anchor = anchor;
-      }
-      fs.mkdirSync(path.join("data", "sessions"), { recursive: true });
-      fs.writeFileSync(path.join("data", "sessions", "session.json"), JSON.stringify(exp, null, 2));
-      fs.rmSync(path.join("data", "sessions", "session.backup.json"), { force: true });
+      const { sealed, verify: v, anchor, anchorError } = await sealAndAnchor(host, { onEvent: send });
+      if (anchorError) console.error("anchoring failed: " + anchorError);
       await host.closeAll();
-      send({ type: "done", sealed, verify: v, anchor });
+      send({ type: "done", sealed, verify: v, anchor, anchorError });
     } catch (e) { send({ type: "error", message: String(e.message || e) }); }
   });
 });
