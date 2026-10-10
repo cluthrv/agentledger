@@ -22,7 +22,7 @@ app.get("/api/session", (req, res) => res.json(getSession()));
 app.post("/api/verify", async (req, res) => { try { res.json(await verifySession()); } catch (e) { res.status(400).json({ error: e.message }); } });
 app.post("/api/tamper", (req, res) => { try { res.json(tamperSession(req.body)); } catch (e) { res.status(400).json({ error: e.message }); } });
 app.post("/api/restore", (req, res) => { try { restoreSession(); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); } });
-app.post("/api/prove", (req, res) => { try { res.json(proveRecord(req.body.seq)); } catch (e) { res.status(400).json({ error: e.message }); } });
+app.post("/api/prove", async (req, res) => { try { res.json(await proveRecord(req.body.seq)); } catch (e) { res.status(400).json({ error: e.message }); } });
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });

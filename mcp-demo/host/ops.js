@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { hashActionRecord, computeMerkleRoot, generateMerkleProof, verifyMerkleProof } from "@vluthra/agent-ledger";
 import { ephemeralSigner, messages } from "./keys.js";
+import { anchorBackend, trustedAnchorers, readAnchor } from "./anchor.js";
 import { SESSION_PATH as SESSION, BACKUP_PATH as BACKUP } from "./finalize.js";
 
 export function getSession() {
@@ -61,15 +62,38 @@ export function restoreSession() {
   fs.copyFileSync(BACKUP, SESSION);
   return true;
 }
-export function proveRecord(seq) {
+// Proves one record belongs to the session root, then ties that root to the
+// anchor read from its source (chain or rehearsal registry). Only with no anchor
+// source configured does it fall back to the copy cached in the session file,
+// and says so.
+export async function proveRecord(seq) {
   const data = getSession();
   const leaves = data.records.map((r) => r.hash);
   const idx = data.records.findIndex((r) => r.sequenceNumber === Number(seq));
   if (idx < 0) throw new Error("no record with sequenceNumber " + seq);
   const proof = generateMerkleProof(leaves, idx);
   const ok = verifyMerkleProof(proof);
-  const anchoredRoot = (data.anchor?.root || "").replace(/^0x/, "");
-  const ties = anchoredRoot ? proof.root === anchoredRoot : proof.root === data.session.merkleRoot;
+
+  let anchoredRoot = null, anchorSource;
+  const backend = anchorBackend();
+  if (backend) {
+    anchorSource = backend === "rehearsal" ? "rehearsal registry" : "chain";
+    try {
+      for (const a of backend === "rehearsal" ? ["rehearsal"] : trustedAnchorers()) {
+        const on = await readAnchor(a, data.session.sessionId);
+        if (on) { anchoredRoot = on.root; break; }
+      }
+      if (!anchoredRoot) anchorSource += " (no anchor found for this session)";
+    } catch (e) {
+      anchorSource += " (unreachable: " + (e.shortMessage || e.message) + ")";
+    }
+  } else {
+    anchoredRoot = (data.anchor?.root || data.session.merkleRoot || "").replace(/^0x/, "");
+    anchorSource = "session file (NOT independent)";
+  }
   const rec = data.records[idx];
-  return { seq, label: rec.metadata?.tool || rec.actionType, records: leaves.length, siblings: proof.siblings.length, valid: ok, tiesToAnchor: ties };
+  return {
+    seq, label: rec.metadata?.tool || rec.actionType, records: leaves.length, siblings: proof.siblings.length,
+    valid: ok, tiesToAnchor: !!anchoredRoot && proof.root === anchoredRoot, anchorSource,
+  };
 }

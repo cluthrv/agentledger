@@ -2,26 +2,23 @@
 // PROVE ONE ACTION (Phase 6)
 //   node host/prove.js <sequenceNumber>
 // Proves one record belongs to the anchored root using ~log2(n) sibling hashes,
-// without needing or revealing the other records.
+// without needing or revealing the other records. The root it ties to is read
+// from the anchor's source (the chain), not from the session file.
 // ---------------------------------------------------------------------------
-import fs from "node:fs";
-import { generateMerkleProof, verifyMerkleProof } from "@vluthra/agent-ledger";
+import "dotenv/config";
+import { proveRecord } from "./ops.js";
 
-const seq = Number(process.argv[2]);
-const data = JSON.parse(fs.readFileSync("data/sessions/session.json", "utf8"));
-const leaves = data.records.map((r) => r.hash);
-const idx = data.records.findIndex((r) => r.sequenceNumber === seq);
-if (idx < 0) { console.error("No record with sequenceNumber " + seq); process.exit(1); }
+let p;
+try { p = await proveRecord(Number(process.argv[2])); }
+catch (e) { console.error(e.message); process.exit(1); }
 
-const proof = generateMerkleProof(leaves, idx);
-const ok = verifyMerkleProof(proof);
-const anchoredRoot = (data.anchor?.root || "").replace(/^0x/, "");
-const tiesToAnchor = anchoredRoot ? proof.root === anchoredRoot : proof.root === data.session.merkleRoot;
-
-const rec = data.records[idx];
-console.log(`\nProving record ${seq} (${rec.metadata?.tool || rec.actionType}) belongs to the anchored session.\n`);
-console.log(`  records in session:     ${leaves.length}`);
-console.log(`  sibling hashes needed:  ${proof.siblings.length}  (about log2 of the record count)`);
-console.log(`  proof valid:            ${ok}`);
-console.log(`  ties to anchored root:  ${tiesToAnchor}`);
-console.log(`\n  Proved one action without needing or revealing the other ${leaves.length - 1} records.`);
+console.log(`
+Proving record ${p.seq} (${p.label}) belongs to the anchored session.
+`);
+console.log(`  records in session:     ${p.records}`);
+console.log(`  sibling hashes needed:  ${p.siblings}  (about log2 of the record count)`);
+console.log(`  proof valid:            ${p.valid}`);
+console.log(`  ties to anchored root:  ${p.tiesToAnchor}  [anchor read from: ${p.anchorSource}]`);
+if (p.valid && p.tiesToAnchor) console.log(`
+  Proved one action without needing or revealing the other ${p.records - 1} records.`);
+process.exit(p.valid && p.tiesToAnchor ? 0 : 1);
