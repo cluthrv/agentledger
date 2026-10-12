@@ -66,6 +66,7 @@
   <button data-tab="investigate">2 · Investigate</button>
   <button data-tab="verify">3 · Verify</button>
   <button data-tab="tamper">4 · Tamper</button>
+  <button data-tab="prove">5 · Prove</button>
 </nav>
 <main>
   <!-- RUN -->
@@ -124,6 +125,18 @@
       <div id="tamperResult" style="margin-top:16px;"></div>
     </div>
   </section>
+  <!-- PROVE -->
+  <section id="prove" class="tab hidden">
+    <div class="panel">
+      <h2>Prove one action</h2>
+      <p class="muted">Show that a single record belongs to the anchored session, using only a handful of sibling hashes. The other records aren't needed and aren't revealed.</p>
+      <div class="row">
+        <div><label>Record</label><select id="pRecord"></select></div>
+        <div style="flex:0 0 auto;min-width:0;"><button class="action" id="proveBtn">Prove</button></div>
+      </div>
+      <div id="proveResult" style="margin-top:16px;"></div>
+    </div>
+  </section>
 </main>
 <script>
 const $=(s)=>document.querySelector(s);
@@ -132,6 +145,7 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   b.classList.add("active");
   document.querySelectorAll(".tab").forEach(t=>t.classList.add("hidden"));
   $("#"+b.dataset.tab).classList.remove("hidden");
+  if(b.dataset.tab==="tamper"||b.dataset.tab==="prove")loadRecords();
 });
 function badge(td){td=td||"";if(td.startsWith("external"))return '<span class="badge ext">'+td+'</span>';if(td.startsWith("human"))return '<span class="badge human">'+td+'</span>';return '<span class="badge int">'+td+'</span>';}
 
@@ -229,8 +243,9 @@ async function doVerify(){
 $("#verifyBtn").onclick=doVerify;
 // TAMPER
 async function loadRecords(){
-  const s=await (await fetch("/api/session")).json();const sel=$("#tRecord");sel.innerHTML="";
-  if(!s)return;s.records.forEach(r=>{const o=document.createElement("option");o.value=r.sequenceNumber;o.textContent="#"+r.sequenceNumber+" "+(r.metadata?.tool||(r.actionType==="decision"?"reasoning":r.actionType));sel.appendChild(o);});
+  const s=await (await fetch("/api/session")).json();
+  ["#tRecord","#pRecord"].forEach(id=>{const sel=$(id);sel.innerHTML="";
+    if(!s)return;s.records.forEach(r=>{const o=document.createElement("option");o.value=r.sequenceNumber;o.textContent="#"+r.sequenceNumber+" "+(r.metadata?.tool||(r.actionType==="decision"?"reasoning":r.actionType));sel.appendChild(o);});});
 }
 $("#tRecord")&&loadRecords();
 $("#tamperBtn").onclick=async()=>{
@@ -244,6 +259,20 @@ async function doVerifyInto(target){
   $(target).innerHTML=checksHTML(r);return r;
 }
 $("#restoreBtn").onclick=async()=>{await fetch("/api/restore",{method:"POST"});$("#tamperResult").innerHTML='<div class="banner ok">Restored to the original anchored session.</div>';loadRecords();};
+// PROVE
+$("#proveBtn").onclick=async()=>{
+  const out=$("#proveResult");out.innerHTML='<p class="muted">Proving...</p>';
+  let p;
+  try{p=await (await fetch("/api/prove",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seq:Number($("#pRecord").value)})})).json();}
+  catch(e){p={error:e.message};}
+  if(p.error){out.innerHTML='<div class="banner bad">'+p.error+'</div>';return;}
+  const row=(ok,title,detail)=>'<div class="check"><div class="mark '+(ok?"ok":"xx")+'">'+(ok?"✓":"✕")+'</div><div><b>'+title+'</b><br><span class="muted" style="margin:0">'+detail+'</span></div></div>';
+  const good=p.valid&&p.tiesToAnchor;
+  out.innerHTML=
+    row(p.valid,"merkle_proof","record #"+p.seq+" ("+p.label+") hashes up to the session root using "+p.siblings+" sibling hash"+(p.siblings===1?"":"es")+", out of "+p.records+" records")+
+    row(p.tiesToAnchor,"ties_to_anchor",(p.tiesToAnchor?"that root matches":"that root does NOT match")+" the anchor read from: "+p.anchorSource)+
+    '<div class="banner '+(good?"ok":"bad")+'">'+(good?"PROVED — one action, without needing or revealing the other "+(p.records-1)+" records":"NOT PROVED — this record does not tie to the anchored session")+'</div>';
+};
 </script>
 </body>
 </html>

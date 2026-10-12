@@ -81,7 +81,8 @@ is labelled NOT independent.
 
 ## Suggested on-stage flow
 Run -> Investigate -> Verify -> Tamper (naive) -> Tamper (smart) ->
-Tamper (forge) -> Restore, then the single-action proof (`npm run prove -- 2`).
+Tamper (forge) -> Restore -> Prove (tab 5: pick a record, click Prove; or
+`npm run prove -- 2` in a terminal).
 
 ## Headless
     npm run record                         # run, seal, sign, anchor
