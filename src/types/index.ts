@@ -126,6 +126,17 @@ export interface MerkleProof {
   root: string;
 }
 
+/** Record-hash canonicalization and Merkle construction version. */
+export type HashVersion = 'v1' | 'v2';
+
+/**
+ * A Merkle v2 proof (RFC 6962 style leaves and nodes). Levels where the
+ * record's node is carried up contribute no sibling.
+ */
+export interface MerkleProofV2 extends MerkleProof {
+  version: 'v2';
+}
+
 /**
  * A sealed audit session containing the complete cryptographic summary.
  */
@@ -150,6 +161,10 @@ export interface AuditSession {
   platform?: string;
   /** Arbitrary session-level metadata */
   metadata?: Record<string, unknown>;
+  /** Record-hash canonicalization; present only for v2 sessions (absent = v1) */
+  canonicalization?: HashVersion;
+  /** Merkle construction; present only for v2 sessions (absent = v1) */
+  merkle?: HashVersion;
 }
 
 /**

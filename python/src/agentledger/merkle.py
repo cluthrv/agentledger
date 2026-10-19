@@ -135,3 +135,76 @@ def verify_merkle_proof(proof: MerkleProof) -> bool:
         else:
             current = combine_hashes(sib.hash, current)
     return current == proof.root
+
+
+# ---------------------------------------------------------------------------
+# Merkle v2 (RFC 6962 style), matching src/core/merkle.ts
+#
+#   leaf = SHA-256(0x00 || record hash bytes)
+#   node = SHA-256(0x01 || left bytes || right bytes)
+#
+# An odd node at the end of a level is carried up unchanged, never duplicated.
+# ---------------------------------------------------------------------------
+
+import hashlib as _hashlib
+import re as _re
+
+_HEX32 = _re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def _hex_bytes(h: str) -> bytes:
+    if not _HEX32.match(h):
+        raise ValueError(f"Merkle v2: expected a 32-byte hex hash, got {h!r}")
+    return bytes.fromhex(h)
+
+
+def merkle_leaf_v2(record_hash: str) -> str:
+    return _hashlib.sha256(b"\x00" + _hex_bytes(record_hash)).hexdigest()
+
+
+def merkle_node_v2(left: str, right: str) -> str:
+    return _hashlib.sha256(b"\x01" + _hex_bytes(left) + _hex_bytes(right)).hexdigest()
+
+
+def _next_level(level: List[str]) -> List[str]:
+    return [
+        merkle_node_v2(level[i], level[i + 1]) if i + 1 < len(level) else level[i]
+        for i in range(0, len(level), 2)
+    ]
+
+
+def compute_merkle_root_v2(record_hashes: List[str]) -> Optional[str]:
+    """Merkle v2 root over record hashes, or None for an empty list."""
+    if not record_hashes:
+        return None
+    level = [merkle_leaf_v2(h) for h in record_hashes]
+    while len(level) > 1:
+        level = _next_level(level)
+    return level[0]
+
+
+def generate_merkle_proof_v2(record_hashes: List[str], record_index: int) -> Optional[MerkleProof]:
+    """Merkle v2 proof; a level where the node is carried up adds no sibling."""
+    if record_index < 0 or record_index >= len(record_hashes):
+        return None
+    siblings: List[MerkleSibling] = []
+    level = [merkle_leaf_v2(h) for h in record_hashes]
+    index = record_index
+    while len(level) > 1:
+        if index % 2 == 1:
+            siblings.append(MerkleSibling(hash=level[index - 1], position="left"))
+        elif index + 1 < len(level):
+            siblings.append(MerkleSibling(hash=level[index + 1], position="right"))
+        level = _next_level(level)
+        index //= 2
+    return MerkleProof(record_index=record_index, record_hash=record_hashes[record_index], siblings=siblings, root=level[0])
+
+
+def verify_merkle_proof_v2(proof: MerkleProof) -> bool:
+    try:
+        current = merkle_leaf_v2(proof.record_hash)
+        for s in proof.siblings:
+            current = merkle_node_v2(current, s.hash) if s.position == "right" else merkle_node_v2(s.hash, current)
+    except ValueError:
+        return False
+    return current == proof.root

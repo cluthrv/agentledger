@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-ledger"
-version = "0.1.0"
+version = "0.2.0"
 description = "Cryptographic audit trails for AI agent operations: SHA-256 hash chains and Merkle trees. Python port of the TypeScript @vluthra/agent-ledger, producing identical hashes and roots for cross-language verification."
 readme = "README.md"
 requires-python = ">=3.9"

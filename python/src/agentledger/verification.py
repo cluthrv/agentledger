@@ -13,6 +13,12 @@ anchored root from the chain itself (the AnchorRegistry contract in
 ``mcp-demo/contracts``), keyed by session id and a trusted anchorer address that
 comes from your configuration, not from the document.
 
+A document says how it was hashed: ``"canonicalization": "v2"`` and
+``"merkle": "v2"`` for sessions recorded with v2 (record hashes over canonical
+JSON of every nested field; RFC 6962 style Merkle tree), both absent for v1.
+v1 documents verify as before; their record hashes do not cover nested fields
+(see CANONICALIZATION.md and SIGNING.md).
+
 Gateway and server signatures (``provenance``, Ed25519) are checked by the
 JavaScript verifier in ``mcp-demo``; this module stays dependency-free.
 """
@@ -24,7 +30,8 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from .merkle import compute_merkle_root
+from .hashing import hash_record_dict_v2
+from .merkle import compute_merkle_root, compute_merkle_root_v2
 from .recorder import verify_chain
 from .types import ActionRecord, VerificationCheck, VerificationResult
 
@@ -32,6 +39,24 @@ from .types import ActionRecord, VerificationCheck, VerificationResult
 def load_records(doc: Dict[str, Any]) -> List[ActionRecord]:
     """Build ActionRecord objects from an exported session document."""
     return [ActionRecord.from_dict(r) for r in doc.get("records", [])]
+
+
+def _versions(doc: Dict[str, Any]) -> Tuple[str, str]:
+    return doc.get("canonicalization", "v1"), doc.get("merkle", "v1")
+
+
+def _verify_chain_v2(raw_records: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
+    """v2 counterpart of ``verify_chain``: hashes, linkage and sequence numbers."""
+    errors: List[str] = []
+    for i, r in enumerate(raw_records):
+        if r.get("sequenceNumber") != i:
+            errors.append(f"Record {i}: sequenceNumber is {r.get('sequenceNumber')}, expected {i}")
+        if hash_record_dict_v2(r) != r.get("hash"):
+            errors.append(f"Record {i} ({r.get('id')}): v2 hash verification failed, content may have been tampered with")
+        expected_prev = raw_records[i - 1].get("hash") if i > 0 else None
+        if r.get("previousHash") != expected_prev:
+            errors.append(f"Record {i} ({r.get('id')}): previousHash does not match, chain is broken")
+    return not errors, errors
 
 
 # First 4 bytes of keccak256("anchors(address,bytes32)"), the public getter on
@@ -136,9 +161,23 @@ def verify_exported_session(
     ``anchored_root_onchain``, which reads the root from the chain itself.
     """
     records = load_records(doc)
+    raw_records = doc.get("records", [])
     checks: List[VerificationCheck] = []
+    canonicalization, merkle = _versions(doc)
 
-    valid, errors = verify_chain(records)
+    if canonicalization not in ("v1", "v2") or merkle != canonicalization:
+        checks.append(
+            VerificationCheck(
+                name="hash_version",
+                passed=False,
+                detail=f"Unsupported or mixed versions: canonicalization {canonicalization}, merkle {merkle}",
+            )
+        )
+        v2 = False
+    else:
+        v2 = canonicalization == "v2"
+
+    valid, errors = _verify_chain_v2(raw_records) if v2 else verify_chain(records)
     checks.append(
         VerificationCheck(
             name="hash_chain_integrity",
@@ -152,7 +191,9 @@ def verify_exported_session(
     )
 
     stored_root: Optional[str] = (doc.get("session") or {}).get("merkleRoot")
-    recomputed_root = compute_merkle_root([r.hash for r in records])
+    hashes = [r.get("hash") for r in raw_records]
+    recomputed_root = compute_merkle_root_v2(hashes) if v2 else compute_merkle_root(hashes)
+    anchor_root = recomputed_root
     root_ok = stored_root is not None and recomputed_root == stored_root
     checks.append(
         VerificationCheck(
@@ -170,7 +211,7 @@ def verify_exported_session(
     anchor = doc.get("anchor")
     if anchor and anchor.get("root"):
         anchored = _strip0x(anchor["root"]).lower()
-        anchored_ok = recomputed_root is not None and recomputed_root.lower() == anchored
+        anchored_ok = anchor_root is not None and anchor_root.lower() == anchored
         checks.append(
             VerificationCheck(
                 name="anchored_root_match",
@@ -186,7 +227,7 @@ def verify_exported_session(
 
     if onchain is not None:
         session_id = (doc.get("session") or {}).get("sessionId", "")
-        checks.append(_check_onchain(onchain, session_id, recomputed_root))
+        checks.append(_check_onchain(onchain, session_id, anchor_root))
 
     all_passed = all(c.passed for c in checks)
     session_id = (doc.get("session") or {}).get("sessionId", "?")

@@ -27,6 +27,8 @@
   .stream{min-height:320px;max-height:440px;overflow:auto;}
   .bubble{border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.4;}
   .bubble.decision{background:#F1F6F5;border:1px solid var(--line);}
+  .step{font-family:Consolas,monospace;font-size:12px;color:var(--slate);padding:2px 12px 8px;word-break:break-word;}
+  .step b{color:var(--tx);}
   .receipt{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px;}
   .receipt .tool{font-family:Consolas,monospace;font-weight:700;color:var(--tx);}
   .approval{border:1px solid var(--amber);border-left:4px solid var(--amber);background:#FBF1E3;border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:13px;line-height:1.45;}
@@ -107,7 +109,7 @@
   <section id="tamper" class="tab hidden">
     <div class="panel">
       <h2>Tamper with the evidence</h2>
-      <p class="muted">Pick a record and change a field. Then verify. Each mode is a stronger attacker: naive edits the field, smart also re-seals, forge rewrites everything in the file (anchor copy and signatures included).</p>
+      <p class="muted">Pick a record and change a field. Then verify. Each mode is a stronger attacker: naive edits the field, nested arg changes a tool argument inside a record, smart also re-seals, forge rewrites everything in the file (anchor copy and signatures included).</p>
       <div class="row">
         <div><label>Record</label><select id="tRecord"></select></div>
         <div><label>Field (dot path)</label><input type="text" id="tPath" value="output.score"/></div>
@@ -115,6 +117,7 @@
       </div>
       <div class="row" style="margin-top:4px;"><div><label>Attacker</label><select id="tMode">
         <option value="naive">Naive: change the field, leave the hash</option>
+        <option value="nested-arg">Nested arg: create_credit_line amount to 240000</option>
         <option value="smart">Smart: re-hash, re-chain, and re-seal locally</option>
         <option value="forge">Forge: rewrite everything in the file, re-sign with own key</option>
       </select></div></div>
@@ -170,6 +173,8 @@ $("#runBtn").onclick=()=>{
   ws.onmessage=(m)=>{
     const e=JSON.parse(m.data);
     if(e.type==="decision"){const d=document.createElement("div");d.className="bubble decision";d.textContent=e.text;$("#agentStream").appendChild(d);$("#agentStream").scrollTop=1e9;}
+    if(e.type==="tool_call"){const a=document.createElement("div");a.className="step";a.innerHTML='→ calls <b></b> ';a.querySelector("b").textContent=e.name;a.appendChild(document.createTextNode(JSON.stringify(e.input)));$("#agentStream").appendChild(a);$("#agentStream").scrollTop=1e9;}
+    if(e.type==="tool_result"){const a=document.createElement("div");a.className="step";a.textContent="← "+JSON.stringify(e.output);$("#agentStream").appendChild(a);$("#agentStream").scrollTop=1e9;}
     if(e.type==="tool_call"){const d=document.createElement("div");d.className="receipt";d.innerHTML='<span class="tool">'+e.name+'</span>';$("#receiptStream").appendChild(d);$("#receiptStream").scrollTop=1e9;}
     if(e.type==="tool_result"){const rs=$("#receiptStream").lastChild;if(rs)rs.innerHTML+=e.receipt?' <span class="hash">#'+e.receipt.seq+' · '+e.receipt.hash.slice(0,12)+'… · signed '+e.receipt.keyId.slice(0,8)+'</span>':' <span class="hash">recorded</span>';}
     // Human approval beat: surface the (simulated) VP override as a distinct human step.
@@ -180,7 +185,7 @@ $("#runBtn").onclick=()=>{
     if(e.type==="anchoring"){st.textContent=e.backend==="rehearsal"?"Sealing and anchoring the root (offline rehearsal registry)...":"Sealing and anchoring the root to Arbitrum...";}
     if(e.type==="anchor_error"){st.textContent="Anchoring failed: "+e.message;}
     if(e.type==="done"){$("#runBtn").disabled=false;
-      let html="session sealed · "+e.sealed.recordCount+" records · root "+e.sealed.merkleRoot.slice(0,16)+"... · "+(e.verify.valid?"VERIFIED":"FAILED");
+      let html="session sealed · "+e.sealed.recordCount+" records · root "+(e.sealed.anchorRoot||e.sealed.merkleRoot).slice(0,16)+"... · "+(e.verify.valid?"VERIFIED":"FAILED");
       if(e.anchor&&e.anchor.explorer)html+=' · <a href="'+e.anchor.explorer+'" target="_blank">view on Arbiscan</a>';
       else if(e.anchor)html+=" · anchored in "+e.anchor.chain;
       else if(e.anchorError)html+=' · <span style="color:#ffb3a7">anchoring FAILED: '+e.anchorError+'</span>';
@@ -193,7 +198,7 @@ $("#runBtn").onclick=()=>{
 $("#loadBtn").onclick=async()=>{
   const s=await (await fetch("/api/session")).json();
   if(!s){$("#timeline").innerHTML="<p class='muted'>No session yet. Run the agent first.</p>";return;}
-  $("#sessionMeta").innerHTML="session "+s.session.sessionId.slice(0,8)+" · "+s.session.recordCount+" records · root "+s.session.merkleRoot.slice(0,16)+"..."+(s.anchor?" · anchored on "+s.anchor.chain:"");
+  $("#sessionMeta").innerHTML="session "+s.session.sessionId.slice(0,8)+" · "+s.session.recordCount+" records · root "+(s.anchor?s.anchor.root.replace(/^0x/,""):s.session.merkleRoot).slice(0,16)+"..."+(s.anchor?" · anchored on "+s.anchor.chain:"");
   const tl=$("#timeline");tl.innerHTML="";
   s.records.forEach(r=>{
     const isApproval=r.actionType==="tool_call"&&r.metadata&&r.metadata.tool==="request_approval";
@@ -221,11 +226,12 @@ const BANNER={
   "intact-unanchored":["warn","INTACT — but not checked against an independent anchor"],
   tampered:["bad","TAMPER DETECTED — no longer matches what was signed and anchored"],
   unavailable:["warn","COULD NOT VERIFY — the anchor source was unreachable"],
+  "not-anchored":["bad","NOT ANCHORED — the chain has no anchor for this session; not verified"],
 };
 function checksHTML(r){
   let html="";
   r.checks.forEach(ch=>{const m=MARK[ch.passed?"ok":ch.unavailable?"unk":"xx"];html+='<div class="check"><div class="mark '+m[0]+'">'+m[1]+'</div><div><b>'+ch.name+'</b><br><span class="muted" style="margin:0">'+ch.detail+'</span></div></div>';});
-  const b=BANNER[r.status]||BANNER.tampered;
+  const b=BANNER[r.reason||r.status]||BANNER.tampered;
   return html+'<div class="banner '+b[0]+'">'+b[1]+'</div>';
 }
 async function fetchVerify(){

@@ -4,13 +4,14 @@ Tamper-evident audit trails for AI agent operations.
 
 AgentLedger creates tamper-evident records of what AI agents do. It uses SHA-256 hash chains and Merkle trees so that any change to a recorded action after the fact becomes cryptographically detectable.
 
-## Two implementations and a reference demo
+## Implementations and a reference demo
 
-This repository contains two independent implementations of the same pattern, plus a runnable MCP demo:
+This repository contains the TypeScript library, its Python port, an independent Salesforce implementation of the same pattern, and a runnable MCP demo:
 
 | Implementation              | Location                     | Install                                                            |
 | --------------------------- | ---------------------------- | ------------------------------------------------------------------ |
 | **TypeScript core library** | `src/` (this README)         | `npm install @vluthra/agent-ledger`                                |
+| **Python SDK**              | [`python/`](python/)         | See [python/README.md](python/README.md) (PyPI publish pending)     |
 | **Salesforce / Agentforce** | [`salesforce/`](salesforce/) | Unlocked package, see [salesforce/README.md](salesforce/README.md) |
 | **MCP gateway demo**        | [`mcp-demo/`](mcp-demo/)     | See [mcp-demo/README.md](mcp-demo/README.md)                       |
 
@@ -129,6 +130,10 @@ The core library produces the sealed Merkle root. The MCP demo takes the next st
 
 The demo's verifier reads the anchored root from the chain itself, keyed by session id and a pinned gateway address, rather than trusting the copy cached in the session file. The gateway also signs every receipt (Ed25519), signs a checkpoint of the running root every few records, and returns each receipt to the caller in the MCP result's `_meta`. One demo server (the credit bureau) signs its own results, so a record carries evidence from both sides of the `tools/call`.
 
+### Hashing versions (v2)
+
+Version 0.2.0 adds v2 hashing. A v2 record hash is SHA-256 over canonical JSON (RFC 8785) of every field, so nested values such as a tool call's arguments are covered; the v1 hash skipped nested keys. v2 also uses an RFC 6962 style Merkle tree (domain-separated leaves and nodes, odd node carried up). v1 stays the default for `AgentLedgerSession` so existing sessions keep verifying; opt in with `new AgentLedgerSession({ agentId, canonicalization: 'v2' })`. The MCP demo records every new session with v2 and writes `"canonicalization": "v2"` and `"merkle": "v2"` into the session file. The exact hashing, signing and anchoring rules are in [SIGNING.md](SIGNING.md).
+
 ## API reference
 
 ### AgentLedgerSession
@@ -232,7 +237,7 @@ npm run build
 - [x] Salesforce-native implementation (see [`salesforce/`](salesforce/))
 - [x] MCP gateway demo with boundary capture across multiple servers (see [`mcp-demo/`](mcp-demo/))
 - [x] External anchoring of the sealed fingerprint to an independent ledger (demonstrated in `mcp-demo/`, anchored to Arbitrum Sepolia)
-- [ ] Python SDK (PyPI package)
+- [x] Python SDK (see [`python/`](python/); PyPI publish pending)
 - [ ] REST verification API with OpenAPI spec
 - [ ] Storage adapters (PostgreSQL, DynamoDB)
 - [ ] CLI tool for offline verification

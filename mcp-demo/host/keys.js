@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { canonicalJson } from "@vluthra/agent-ledger";
 
 const KEY_DIR = path.join("data", "keys");
 const envName = (name) => name.toUpperCase().replace(/[^A-Z0-9]/g, "_");
@@ -65,24 +66,27 @@ export function verifySignature(publicKeyPem, message, signatureB64) {
   }
 }
 
-// Deterministic JSON (sorted keys) so both sides hash identical bytes.
-export function canonicalJson(value) {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
-  return "{" + Object.keys(value).sort().filter((k) => value[k] !== undefined)
-    .map((k) => JSON.stringify(k) + ":" + canonicalJson(value[k])).join(",") + "}";
-}
+// Deterministic JSON (RFC 8785: keys sorted at every depth) so both sides hash
+// identical bytes. The library's v2 canonicalization, used for server receipts.
+export { canonicalJson };
 
 export const sha256Hex = (s) => crypto.createHash("sha256").update(s).digest("hex");
 
 // Domain-separated messages, so a signature over one kind of thing can never be
-// replayed as a signature over another.
+// replayed as a signature over another. The version is part of the label, so a
+// v2 signature can never be checked as a v1 one (no downgrade). The v1 messages
+// are what sessions signed before v2; the verifier accepts them only for v1
+// files. The signature label (agentledger/record-sig/v2) differs from the
+// record-hash label (agentledger/record-hash/v2, in the library).
 export const messages = {
-  record: (sessionId, seq, hash) => `agentledger/record/v1\n${sessionId}\n${seq}\n${hash}`,
-  checkpoint: (kind, sessionId, recordCount, root) => `agentledger/${kind}/v1\n${sessionId}\n${recordCount}\n${root}`,
+  record: (version, sessionId, seq, hash) => version === "v2"
+    ? `agentledger/record-sig/v2\n${sessionId}\n${seq}\n${hash}`
+    : `agentledger/record/v1\n${sessionId}\n${seq}\n${hash}`,
+  checkpoint: (version, kind, sessionId, recordCount, root) => `agentledger/${kind}/${version}\n${sessionId}\n${recordCount}\n${root}`,
   serverReceipt: (r) => `agentledger/server-receipt/v1\n${r.server}\n${r.tool}\n${r.argsHash}\n${r.resultHash}\n${r.issuedAt}`,
 };
 
 // _meta keys on the MCP tools/call result.
-export const RECEIPT_META_KEY = "io.agentledger/receipt";
-export const SERVER_RECEIPT_META_KEY = "io.agentledger/server-receipt";
+// Reverse-DNS prefix of a domain the project controls (cluthrv.github.io).
+export const RECEIPT_META_KEY = "io.github.cluthrv/receipt";
+export const SERVER_RECEIPT_META_KEY = "io.github.cluthrv/server-receipt";

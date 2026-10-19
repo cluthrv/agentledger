@@ -22,13 +22,27 @@ Example
     assert result.valid
 """
 
-from .hashing import combine_hashes, hash_action_record, sha256, sorted_stringify
+from .canonical import canonical_json
+from .hashing import (
+    RECORD_HASH_V2_TAG,
+    combine_hashes,
+    hash_action_record,
+    hash_action_record_v2,
+    hash_record_dict_v2,
+    sha256,
+    sorted_stringify,
+)
 from .merkle import (
     MerkleProof,
     MerkleSibling,
     compute_merkle_root,
+    compute_merkle_root_v2,
     generate_merkle_proof,
+    generate_merkle_proof_v2,
+    merkle_leaf_v2,
+    merkle_node_v2,
     verify_merkle_proof,
+    verify_merkle_proof_v2,
 )
 from .recorder import create_action_record, verify_action_record, verify_chain
 from .session import AgentLedgerSession
@@ -49,7 +63,7 @@ from .verification import (
     verify_exported_session,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "AgentLedgerSession",
@@ -73,6 +87,15 @@ __all__ = [
     "generate_merkle_proof",
     "verify_merkle_proof",
     "verify_exported_session",
+    "canonical_json",
+    "RECORD_HASH_V2_TAG",
+    "hash_action_record_v2",
+    "hash_record_dict_v2",
+    "compute_merkle_root_v2",
+    "generate_merkle_proof_v2",
+    "verify_merkle_proof_v2",
+    "merkle_leaf_v2",
+    "merkle_node_v2",
     "OnChainAnchor",
     "read_onchain_anchor",
     "session_id_to_bytes32",

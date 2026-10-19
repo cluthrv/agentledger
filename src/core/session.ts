@@ -18,12 +18,20 @@ import {
   ActionRecord,
   ActionRecordInput,
   AuditSession,
+  HashVersion,
   MerkleProof,
   SessionStatus,
   VerificationResult,
 } from '../types';
 import { createActionRecord, verifyChain } from './recorder';
-import { computeMerkleRoot, generateMerkleProof, verifyMerkleProof } from './merkle';
+import {
+  computeMerkleRoot,
+  computeMerkleRootV2,
+  generateMerkleProof,
+  generateMerkleProofV2,
+  verifyMerkleProof,
+  verifyMerkleProofV2,
+} from './merkle';
 
 export interface SessionOptions {
   /** Identifier for the AI agent being audited */
@@ -34,6 +42,11 @@ export interface SessionOptions {
   platform?: string;
   /** Arbitrary session-level metadata (optional) */
   metadata?: Record<string, unknown>;
+  /**
+   * Hashing version (optional, default 'v1'). 'v2' uses canonical JSON over
+   * every nested field for record hashes and RFC 6962 style Merkle trees.
+   */
+  canonicalization?: HashVersion;
 }
 
 export class AgentLedgerSession {
@@ -43,6 +56,7 @@ export class AgentLedgerSession {
   private readonly initiator?: string;
   private readonly platform?: string;
   private readonly sessionMetadata?: Record<string, unknown>;
+  private readonly version: HashVersion;
   private records: ActionRecord[] = [];
   private status: SessionStatus = SessionStatus.ACTIVE;
   private merkleRoot: string | null = null;
@@ -55,6 +69,7 @@ export class AgentLedgerSession {
     this.initiator = options.initiator;
     this.platform = options.platform;
     this.sessionMetadata = options.metadata;
+    this.version = options.canonicalization ?? 'v1';
   }
 
   /**
@@ -82,7 +97,8 @@ export class AgentLedgerSession {
       this.sessionId,
       input,
       sequenceNumber,
-      previousHash
+      previousHash,
+      this.version
     );
 
     this.records.push(record);
@@ -107,8 +123,7 @@ export class AgentLedgerSession {
       throw new Error('Cannot seal an empty session. Record at least one action first.');
     }
 
-    const hashes = this.records.map((r) => r.hash);
-    this.merkleRoot = computeMerkleRoot(hashes);
+    this.merkleRoot = this.root(this.records.map((r) => r.hash));
     this.endTime = new Date().toISOString();
     this.status = SessionStatus.SEALED;
 
@@ -129,7 +144,7 @@ export class AgentLedgerSession {
     const checks: VerificationResult['checks'] = [];
 
     // Check 1: Chain integrity
-    const chainResult = verifyChain(this.records);
+    const chainResult = verifyChain(this.records, this.version);
     checks.push({
       name: 'hash_chain_integrity',
       passed: chainResult.valid,
@@ -140,8 +155,7 @@ export class AgentLedgerSession {
 
     // Check 2: Merkle root (only if sealed)
     if (this.status === SessionStatus.SEALED && this.merkleRoot) {
-      const hashes = this.records.map((r) => r.hash);
-      const recomputedRoot = computeMerkleRoot(hashes);
+      const recomputedRoot = this.root(this.records.map((r) => r.hash));
       const rootValid = recomputedRoot === this.merkleRoot;
 
       checks.push({
@@ -195,14 +209,30 @@ export class AgentLedgerSession {
     }
 
     const hashes = this.records.map((r) => r.hash);
-    return generateMerkleProof(hashes, recordIndex);
+    return this.version === 'v2'
+      ? generateMerkleProofV2(hashes, recordIndex)
+      : generateMerkleProof(hashes, recordIndex);
   }
 
   /**
    * Verify a Merkle proof against this session's root.
    */
   verifyProof(proof: MerkleProof): boolean {
-    return verifyMerkleProof(proof);
+    return this.version === 'v2'
+      ? verifyMerkleProofV2({ ...proof, version: 'v2' })
+      : verifyMerkleProof(proof);
+  }
+
+  /** Merkle root for this session's version. */
+  private root(hashes: string[]): string | null {
+    return this.version === 'v2' ? computeMerkleRootV2(hashes) : computeMerkleRoot(hashes);
+  }
+
+  /**
+   * Get the hashing version ('v1' or 'v2').
+   */
+  getHashVersion(): HashVersion {
+    return this.version;
   }
 
   /**
@@ -235,6 +265,7 @@ export class AgentLedgerSession {
       initiator: this.initiator,
       platform: this.platform,
       metadata: this.sessionMetadata,
+      ...(this.version === 'v2' && { canonicalization: 'v2' as const, merkle: 'v2' as const }),
     };
   }
 

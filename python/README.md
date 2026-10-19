@@ -43,6 +43,16 @@ proof = session.prove_record(1)
 print("Proof valid:", session.verify_proof(proof))
 ```
 
+## v2 hashing
+
+v2 record hashes cover every field, nested ones such as tool arguments included; v1 hashes do not (see [CANONICALIZATION.md](CANONICALIZATION.md)). v2 also uses an RFC 6962 style Merkle tree. Both match the TypeScript library byte for byte, and [SIGNING.md](../SIGNING.md) has the exact rules.
+
+```python
+from agentledger import hash_action_record_v2, compute_merkle_root_v2, canonical_json
+```
+
+`verify_exported_session` reads `"canonicalization"` and `"merkle"` from the document and verifies v2 sessions with v2 and older ones with v1.
+
 ## Verifying a session someone else sealed
 
 An auditor can verify an exported session document (the `{session, records, anchor}` shape produced by either implementation) without rebuilding the session:

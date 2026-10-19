@@ -14,12 +14,13 @@
     "tamper": "node host/tamper.js",
     "prove": "node host/prove.js",
     "restore": "node host/restore.js",
-    "ui": "node host/server.js"
+    "ui": "node host/server.js",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@vluthra/agent-ledger": "^0.1.2",
+    "@vluthra/agent-ledger": "file:..",
     "dotenv": "^16.4.0",
     "ethers": "^6.17.0",
     "express": "^4.19.0",

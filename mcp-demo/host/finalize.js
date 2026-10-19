@@ -18,7 +18,7 @@ export async function sealAndAnchor(host, { onEvent = () => {} } = {}) {
   const backend = anchorBackend();
   if (backend === "rehearsal" || anchoringConfigured()) {
     onEvent({ type: "anchoring", backend });
-    try { anchor = await anchorRoot(sealed.sessionId, sealed.merkleRoot); exp.anchor = anchor; }
+    try { anchor = await anchorRoot(sealed.sessionId, sealed.anchorRoot); exp.anchor = anchor; }
     catch (e) { anchorError = e.message; onEvent({ type: "anchor_error", message: e.message }); }
   }
 

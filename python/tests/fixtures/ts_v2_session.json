@@ -1,0 +1,275 @@
+{
+  "canonicalization": "v2",
+  "merkle": "v2",
+  "session": {
+    "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+    "agentId": "sales-ops-agent",
+    "startTime": "2026-10-19T12:00:09.984Z",
+    "endTime": "2026-10-19T12:00:10.129Z",
+    "recordCount": 9,
+    "merkleRoot": "1c31ab11234b7cc031ffdb402268eb0fcb464627b440a9292266e2d14f21cdb4",
+    "status": "verified",
+    "initiator": "demo-user",
+    "platform": "mcp",
+    "canonicalization": "v2",
+    "merkle": "v2"
+  },
+  "records": [
+    {
+      "id": "accfef76-8b93-4412-b32f-ff0b2a51ab9f",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 0,
+      "timestamp": "2026-10-19T12:00:10.045Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "Gathering the account, credit score, and exposure in parallel.",
+      "hash": "41d9fd6281f893607ae0ac4651945663362cc51fbdff38a92befa9e73155e03b",
+      "previousHash": null
+    },
+    {
+      "id": "b723a40a-aad2-4777-ac94-38cf9356a8ca",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 1,
+      "timestamp": "2026-10-19T12:00:10.056Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "get_account",
+        "args": {
+          "customerId": "MER-100"
+        }
+      },
+      "output": {
+        "accountId": "001XXMER100",
+        "name": "Meridian Industrial",
+        "tier": "Gold",
+        "currentBalance": 900000,
+        "recentPayments": "two 60-day-late in last quarter"
+      },
+      "metadata": {
+        "tool": "get_account",
+        "system": "crm",
+        "trustDomain": "external:salesforce"
+      },
+      "hash": "1f846c20f4b3ebb26d279075ebf459d09c2e51f989129e661562d25e9ddcc63c",
+      "previousHash": "41d9fd6281f893607ae0ac4651945663362cc51fbdff38a92befa9e73155e03b"
+    },
+    {
+      "id": "60d9e9c8-553c-474d-b64f-7bc65626bc38",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 2,
+      "timestamp": "2026-10-19T12:00:10.067Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "get_credit_score",
+        "args": {
+          "customerId": "MER-100"
+        }
+      },
+      "output": {
+        "score": 580,
+        "previousQuarter": 690
+      },
+      "metadata": {
+        "tool": "get_credit_score",
+        "system": "bureau",
+        "trustDomain": "external:credit-bureau",
+        "serverReceipt": {
+          "server": "bureau",
+          "tool": "get_credit_score",
+          "argsHash": "9e92c1a1473eea3f6e098e6b6febb329652168858f7a6194d30e1c952fa8f6f8",
+          "resultHash": "abcdad4d7485d7ac0ee1b3ef642e7718ed0dd989bf24ef0dae9a494f97864da0",
+          "issuedAt": "2026-10-19T12:00:10.061Z",
+          "keyId": "db440e56590a2c58",
+          "signature": "Hx7q5/2iw4KaUDmki1HJNJzbIj5q+9T75Gpq7P26IBIqWOAGBwMpYVd3I2kWA1untp/MOdBpsiAiFeIVZ0JlDw=="
+        }
+      },
+      "hash": "9dfef618d442bdb349d6d02c9706de195163593533e7606c102dadf67fac6359",
+      "previousHash": "1f846c20f4b3ebb26d279075ebf459d09c2e51f989129e661562d25e9ddcc63c"
+    },
+    {
+      "id": "b1975b2c-ecf1-48b2-bba4-42df7c4b5869",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 3,
+      "timestamp": "2026-10-19T12:00:10.073Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "get_exposure",
+        "args": {
+          "customerId": "MER-100",
+          "requestedLine": 2400000
+        }
+      },
+      "output": {
+        "currentBalance": 900000,
+        "policyLimit": 2000000,
+        "requestedLine": 2400000,
+        "overLimit": true
+      },
+      "metadata": {
+        "tool": "get_exposure",
+        "system": "finance",
+        "trustDomain": "internal:finance"
+      },
+      "hash": "3780ad5941626d24b7c9b4453b778d5b144f3407553f2408eb40034b6d0d66cb",
+      "previousHash": "9dfef618d442bdb349d6d02c9706de195163593533e7606c102dadf67fac6359"
+    },
+    {
+      "id": "8b6b3068-f654-42e5-a579-92cf33ae58c5",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 4,
+      "timestamp": "2026-10-19T12:00:10.113Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "check_credit_policy",
+        "args": {
+          "score": 580,
+          "requestedLine": 2400000,
+          "policyLimit": 2000000
+        }
+      },
+      "output": {
+        "scoreThreshold": 650,
+        "policyLimit": 2000000,
+        "recommendation": "decline",
+        "reasons": [
+          "score 580 below 650",
+          "requested $2,400,000 over $2,000,000 limit"
+        ],
+        "exceptionRequiresApproval": true,
+        "approverRole": "VP"
+      },
+      "metadata": {
+        "tool": "check_credit_policy",
+        "system": "policy",
+        "trustDomain": "internal:policy"
+      },
+      "hash": "fb7be7cfa918768788c80668728799e78f25090db0e19fcee155d68ce4c38b17",
+      "previousHash": "3780ad5941626d24b7c9b4453b778d5b144f3407553f2408eb40034b6d0d66cb"
+    },
+    {
+      "id": "cc91b4a4-caff-4b39-9922-f90c99faf2cd",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 5,
+      "timestamp": "2026-10-19T12:00:10.118Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "Recommendation: DECLINE. Score 580 is below the 650 threshold and $2.4M is over the $2.0M limit. Routing for VP approval per policy.",
+      "hash": "9e5fe17027d606f2bc4b8cfd5750e9a1ece99a96b6245f28d9757a3531ef791f",
+      "previousHash": "fb7be7cfa918768788c80668728799e78f25090db0e19fcee155d68ce4c38b17"
+    },
+    {
+      "id": "678969da-2c4d-41bc-8449-eb8dd285a997",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 6,
+      "timestamp": "2026-10-19T12:00:10.125Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "request_approval",
+        "args": {
+          "customerId": "MER-100",
+          "requestedLine": 2400000,
+          "reason": "score 580 below 650; $2.4M over $2M limit"
+        }
+      },
+      "output": {
+        "approvalId": "APR-9382",
+        "approver": "VP-Sales (MGR-173)",
+        "decision": "APPROVED",
+        "note": "Override approved: strategic account, relationship priority"
+      },
+      "metadata": {
+        "tool": "request_approval",
+        "system": "approval",
+        "trustDomain": "human:approval"
+      },
+      "hash": "18c0d73da44476bf285112036fb83239dc8717d7d364aecc3aac9bb5c5e3b5be",
+      "previousHash": "9e5fe17027d606f2bc4b8cfd5750e9a1ece99a96b6245f28d9757a3531ef791f"
+    },
+    {
+      "id": "3ff886e4-d519-4f54-ba6c-5aae3b1b327d",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 7,
+      "timestamp": "2026-10-19T12:00:10.127Z",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "create_credit_line",
+        "args": {
+          "customerId": "MER-100",
+          "amount": 2400000,
+          "approvalId": "APR-9382"
+        }
+      },
+      "output": {
+        "creditLineId": "CL-5678",
+        "customerId": "MER-100",
+        "amount": 2400000,
+        "approvalId": "APR-9382",
+        "status": "active"
+      },
+      "metadata": {
+        "tool": "create_credit_line",
+        "system": "crm",
+        "trustDomain": "external:salesforce"
+      },
+      "hash": "d117d478773b2ad07d6ccc50bca31f0dee11285bba9aea5cd302ee1166eee1cd",
+      "previousHash": "18c0d73da44476bf285112036fb83239dc8717d7d364aecc3aac9bb5c5e3b5be"
+    },
+    {
+      "id": "d64afa26-2741-40c3-82e0-75bf032f1dc0",
+      "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+      "sequenceNumber": 8,
+      "timestamp": "2026-10-19T12:00:10.127Z",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "Credit line CL-5678 created via VP override, against my DECLINE recommendation.",
+      "hash": "a59e44ffe4b27e7e16054a1e8b80ebd722d403226ffb4393daa6dbb679950cbc",
+      "previousHash": "d117d478773b2ad07d6ccc50bca31f0dee11285bba9aea5cd302ee1166eee1cd"
+    }
+  ],
+  "provenance": {
+    "version": 2,
+    "gateway": {
+      "keyId": "22149b9d494d028b",
+      "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAB7pB2aXIR127voe9rTz34LoOWU/3Yce/IBtJJU/6V60=\n-----END PUBLIC KEY-----\n"
+    },
+    "recordSignatures": [
+      "YJqvWHst4x9tJLmeo3S0mylKkOuDosajMsBcrVAYUQ5FAtMQ8kAgEATl7ywvp0G9r+O8FjzAN2Q5myMWhAooBw==",
+      "qJxJu45+e6Dlj3B3QBX6IYtF7jXSM6/iX/RTi9co0DicMPCWQ0nqE++TCwhXaHBdb++qTrEorU0gaS33L+FZAA==",
+      "TYaTjKXh8RivBt+UIyVX7Ud/ehdlWBTof53h+xezXjqaoTIR1SXTxwFE1PmKAeboBDjBsh5yDrUTjXjhC2aUBw==",
+      "1uK7WjwL7pk66mDIIzGLQEccKua6CPA16Ilj6/KkrPE8vSfCbW1ZureZO6fGh8o782322z06kX7lewDQIBVWBg==",
+      "EjKMDIBds3SF0/wSd+JH8tiAmZp3+f4GgkFakzzQbBVlv4W9adj1BpVZQ0Ih3ij1URdVmDd2JLoixWjtMfIEDA==",
+      "smoSqy5c2/htwPHaW5f2AzS1cMDeh7iO0HbGSjdBrzfRNXxJNIXw9so9/rEGON+QmnKti6SKrpd/RrwlnwU3Bw==",
+      "fW2bI3SdrdLOWuhIM3pOk8VMJ0V5lgvNxG6kXVwHPwuchTWcytRl4IwJD/y58gENxbQDC4acVX4FgkiNv/VkAw==",
+      "1liuKM5T2KrShnvj8+ou+rHg4HgqIzvUYUav7TrTQ4soAJOxOGW2MAJV+9usfNTYHh3eLzrN3AWyvcSDWBh3Ag==",
+      "i8AFvf7qLHJsSL/mgnoxXd2HP/FzZ6rzgkVzYCEN51J9q17HqxTQFdgUmzI/OPtqk/sgaXO++rgX5PlEO6FsDw=="
+    ],
+    "checkpoints": [
+      {
+        "kind": "checkpoint",
+        "recordCount": 5,
+        "root": "ab0aea8409c52460855f66385ed977fed7f798d88fdccee1943ddabe2e8bb7d4",
+        "signedAt": "2026-10-19T12:00:10.115Z",
+        "signature": "8Ni4mBy5kGa/16zy5Oop3c4C36C2ktgx4ic3hmsADLPh0YnVIUVOxPZDZdv8hq1gZjILuzIfwoVuFGcAuuOCDA=="
+      },
+      {
+        "kind": "seal",
+        "recordCount": 9,
+        "root": "1c31ab11234b7cc031ffdb402268eb0fcb464627b440a9292266e2d14f21cdb4",
+        "signedAt": "2026-10-19T12:00:10.129Z",
+        "signature": "5pElf0ILDQGbmcIR9GXB2pF2kTkai/2YFdI+O8s+JJWb2jXjZKNPga15H2j0ki7Js8wOyeM06JY380e4/9f1Bg=="
+      }
+    ]
+  },
+  "anchor": {
+    "chain": "rehearsal registry (offline stand-in for the chain)",
+    "anchorer": "rehearsal",
+    "sessionId": "923566ba-b0eb-4cc4-b6cf-be14750bb6fa",
+    "root": "0x1c31ab11234b7cc031ffdb402268eb0fcb464627b440a9292266e2d14f21cdb4",
+    "anchoredAt": 1792411210,
+    "txHash": null,
+    "explorer": null
+  }
+}

@@ -68,10 +68,24 @@ changing the record hash. Flat fields are fully covered.
 The Python SDK **reproduces this behavior** so v1 hashes match across
 languages and existing anchored roots keep verifying.
 
-### Planned v2 fix
+### v2 fix (implemented, 0.2.0)
 
-A v2 canonicalization will serialize with proper recursive key sorting so all
-nested content is covered, in both the TypeScript and Python implementations.
-It will be versioned (for example a `canonicalVersion` field or a distinct
-hashing function) so that sessions sealed under v1 continue to verify under v1
-and only new sessions use v2. v1 and v2 roots are not interchangeable.
+v2 canonicalization serializes with recursive key sorting (RFC 8785), so all
+nested content is covered, in both TypeScript (`hashActionRecordV2`,
+`canonicalJson`) and Python (`hash_action_record_v2`, `canonical_json`). It is
+versioned: a session file declares `"canonicalization": "v2"` and
+`"merkle": "v2"`, sessions without those fields verify under v1 as before, and
+v1 and v2 roots are not interchangeable. v2 also changes the Merkle tree to RFC
+6962 style leaves and nodes. The exact rules are in [SIGNING.md](../SIGNING.md),
+and both languages are tested against shared vectors
+(`tests/fixtures/v2_vectors.json`).
+
+## Known v1 cross-language edge cases
+
+Two places where the v1 Python serializer above differs from JavaScript's
+`JSON.stringify`. Neither occurs in the recorded demo data, and they are left
+as is so existing v1 hashes stay stable. v2 handles both correctly.
+
+- Numbers from 1e-7 up to 1e-4 that Python's `repr` writes in exponent form:
+  `0.00001` serializes as `1e-5` here, while JavaScript writes `0.00001`.
+- U+2028 and U+2029 are escaped here; `JSON.stringify` leaves them as is.

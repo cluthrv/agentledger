@@ -7,8 +7,13 @@
  */
 
 import { randomUUID } from 'crypto';
-import { ActionRecord, ActionRecordInput } from '../types';
-import { hashActionRecord } from './hash';
+import { ActionRecord, ActionRecordInput, HashVersion } from '../types';
+import { hashActionRecord, hashActionRecordV2 } from './hash';
+
+/** The record-hash function for a canonicalization version. */
+export function recordHasher(version: HashVersion = 'v1'): typeof hashActionRecordV2 {
+  return version === 'v2' ? hashActionRecordV2 : (hashActionRecord as typeof hashActionRecordV2);
+}
 
 /**
  * Creates a new Action Record, computes its hash, and chains it
@@ -18,18 +23,20 @@ import { hashActionRecord } from './hash';
  * @param input - The action details provided by the caller
  * @param sequenceNumber - Position in the session (0-indexed)
  * @param previousHash - Hash of the previous record (null for first)
+ * @param version - Record-hash canonicalization (default 'v1')
  * @returns A complete, immutable Action Record with computed hash
  */
 export function createActionRecord(
   sessionId: string,
   input: ActionRecordInput,
   sequenceNumber: number,
-  previousHash: string | null
+  previousHash: string | null,
+  version: HashVersion = 'v1'
 ): ActionRecord {
   const id = randomUUID();
   const timestamp = new Date().toISOString();
 
-  const hash = hashActionRecord({
+  const hash = recordHasher(version)({
     id,
     sessionId,
     sequenceNumber,
@@ -66,8 +73,8 @@ export function createActionRecord(
  * it to the stored hash. Returns false if any field has been
  * modified after creation.
  */
-export function verifyActionRecord(record: ActionRecord): boolean {
-  const recomputed = hashActionRecord({
+export function verifyActionRecord(record: ActionRecord, version: HashVersion = 'v1'): boolean {
+  const recomputed = recordHasher(version)({
     id: record.id,
     sessionId: record.sessionId,
     sequenceNumber: record.sequenceNumber,
@@ -95,7 +102,7 @@ export function verifyActionRecord(record: ActionRecord): boolean {
  *
  * @returns An object with the overall result and any specific failures
  */
-export function verifyChain(records: ActionRecord[]): {
+export function verifyChain(records: ActionRecord[], version: HashVersion = 'v1'): {
   valid: boolean;
   errors: string[];
 } {
@@ -125,7 +132,7 @@ export function verifyChain(records: ActionRecord[]): {
     }
 
     // Verify record hash integrity
-    if (!verifyActionRecord(record)) {
+    if (!verifyActionRecord(record, version)) {
       errors.push(
         `Record ${i} (${record.id}): hash verification failed — content may have been tampered with`
       );

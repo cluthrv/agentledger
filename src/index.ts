@@ -39,14 +39,22 @@ export {
   MerkleNode,
   MerkleProof,
   VerificationResult,
+  HashVersion,
+  MerkleProofV2,
 } from './types';
 
 // Low-level utilities (for advanced usage)
-export { sha256, hashActionRecord, combineHashes } from './core/hash';
-export { createActionRecord, verifyActionRecord, verifyChain } from './core/recorder';
+export { sha256, hashActionRecord, hashActionRecordV2, RECORD_HASH_V2_TAG, combineHashes } from './core/hash';
+export { canonicalJson } from './core/canonical';
+export { createActionRecord, verifyActionRecord, verifyChain, recordHasher } from './core/recorder';
 export {
   buildMerkleTree,
   computeMerkleRoot,
   generateMerkleProof,
   verifyMerkleProof,
+  merkleLeafV2,
+  merkleNodeV2,
+  computeMerkleRootV2,
+  generateMerkleProofV2,
+  verifyMerkleProofV2,
 } from './core/merkle';

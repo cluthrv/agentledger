@@ -1,7 +1,10 @@
 // ---------------------------------------------------------------------------
 // TAMPER (Phase 6, demo attacker tool)
 //   node host/tamper.js <sequenceNumber> <path> <value> [--smart | --forge]
+//   node host/tamper.js --nested-arg
 // naive (default): change content, leave the stored hash -> breaks record_hash_integrity
+// --nested-arg: preset naive edit of a nested tool argument, create_credit_line's
+//          args.amount -> 240000. v1 hashing missed nested fields; v2 catches it.
 // --smart: also recompute hashes, re-chain, and re-seal locally
 //          -> chain looks intact, but the gateway signatures and the anchor don't match
 // --forge: rewrite everything in the file, including the cached anchor root and
@@ -13,7 +16,9 @@
 import { tamperSession } from "./ops.js";
 
 const args = process.argv.slice(2);
-const mode = args.includes("--forge") ? "forge" : args.includes("--smart") ? "smart" : "naive";
+const mode = args.includes("--nested-arg") ? "nested-arg"
+  : args.includes("--forge") ? "forge"
+  : args.includes("--smart") ? "smart" : "naive";
 const [seq, path, ...valueParts] = args.filter((a) => !a.startsWith("--"));
 
 let t;

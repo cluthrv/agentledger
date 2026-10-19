@@ -191,3 +191,69 @@ def hash_action_record(
 def combine_hashes(left: str, right: str) -> str:
     """Combine two hashes for Merkle construction: sha256(left + right)."""
     return sha256(left + right)
+
+
+# --- v2 ----------------------------------------------------------------------
+
+#: Domain tag prefixed to the canonical record before hashing (v2).
+RECORD_HASH_V2_TAG = "agentledger/record-hash/v2\n"
+
+
+def hash_action_record_v2(
+    *,
+    id: str,
+    session_id: str,
+    sequence_number: int,
+    timestamp: str,
+    agent_id: Optional[str] = None,
+    action_type: Any,
+    input: Mapping[str, Any],
+    output: Mapping[str, Any],
+    reasoning: Optional[str] = None,
+    metadata: Optional[Mapping[str, Any]] = None,
+    previous_hash: Optional[str] = None,
+) -> str:
+    """Compute the v2 hash of an Action Record, matching ``hashActionRecordV2``.
+
+    ``sha256("agentledger/record-hash/v2\n" + canonical_json(content))``, where
+    content holds every content field with camelCase keys and canonical_json
+    sorts keys at every depth, so nested values such as tool arguments are
+    covered. ``agent_id``, ``reasoning`` and ``metadata`` are left out when
+    None; ``previousHash`` is always present (null for the first record).
+    """
+    from .canonical import canonical_json
+
+    content: dict[str, Any] = {
+        "id": id,
+        "sessionId": session_id,
+        "sequenceNumber": sequence_number,
+        "timestamp": timestamp,
+        "actionType": getattr(action_type, "value", action_type),
+        "input": input,
+        "output": output,
+        "previousHash": previous_hash,
+    }
+    if agent_id is not None:
+        content["agentId"] = agent_id
+    if reasoning is not None:
+        content["reasoning"] = reasoning
+    if metadata is not None:
+        content["metadata"] = metadata
+    return sha256(RECORD_HASH_V2_TAG + canonical_json(content))
+
+
+def hash_record_dict_v2(record: Mapping[str, Any]) -> str:
+    """v2 hash of a record as it appears in an exported session (camelCase)."""
+    return hash_action_record_v2(
+        id=record["id"],
+        session_id=record["sessionId"],
+        sequence_number=record["sequenceNumber"],
+        timestamp=record["timestamp"],
+        agent_id=record.get("agentId"),
+        action_type=record["actionType"],
+        input=record.get("input", {}),
+        output=record.get("output", {}),
+        reasoning=record.get("reasoning"),
+        metadata=record.get("metadata"),
+        previous_hash=record.get("previousHash"),
+    )

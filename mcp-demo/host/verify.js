@@ -8,40 +8,57 @@
 // Nothing in the file is trusted on its own word: not the stored root, not the
 // cached anchor block, not the public key it claims was used.
 //
+// The file says how it was hashed ("canonicalization" / "merkle", default v1);
+// hashing.js explains why that can't be used to downgrade a v2 session.
+//
 // status: verified           every check passed, including an independent anchor
 //         intact-unanchored  internally consistent, but nothing independent was checked
-//         tampered           a check failed
+//         tampered           a check failed (reason "not-anchored" when the only
+//                            failure is that the chain has no anchor for the session)
 //         unavailable        the anchor source couldn't be reached
 // ---------------------------------------------------------------------------
 import "dotenv/config";
 import fs from "node:fs";
-import { hashActionRecord, computeMerkleRoot } from "@vluthra/agent-ledger";
 import { anchorBackend, trustedAnchorers, readAnchor } from "./anchor.js";
 import { trustedPublicKey, keyId, verifySignature, canonicalJson, sha256Hex, messages } from "./keys.js";
+import { sessionVersion, recordHash, merkleRoot } from "./hashing.js";
 import { SESSION_PATH } from "./finalize.js";
 
 export async function verifySession(sessionPath = SESSION_PATH) {
   const data = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
   const { records, session, anchor } = data;
   const checks = [];
+  const v = sessionVersion(data);
+  const version = v.canonicalization;
+
+  // 0. Which hashing the file declares. v1 still verifies, with a warning.
+  checks.push({
+    name: "hash_version",
+    passed: v.consistent,
+    detail: !v.consistent
+      ? `unsupported or mixed versions: canonicalization ${v.canonicalization}, merkle ${v.merkle}`
+      : version === "v2"
+        ? "v2: record hashes cover every field, nested ones included; Merkle v2 tree"
+        : "v1 (older session): nested fields such as tool arguments are NOT covered by the record hash",
+  });
 
   // 1. Each record's content must still match its stored hash.
   let contentOk = true, firstBad = -1;
   for (let i = 0; i < records.length; i++) {
-    if (hashActionRecord(records[i]) !== records[i].hash) { contentOk = false; if (firstBad < 0) firstBad = i; }
+    if (recordHash(version, records[i]) !== records[i].hash) { contentOk = false; if (firstBad < 0) firstBad = i; }
   }
   checks.push({
     name: "record_hash_integrity",
     passed: contentOk,
     detail: contentOk
-      ? `all ${records.length} record hashes match their content`
+      ? `all ${records.length} record hashes match their content${version === "v2" ? ", nested fields included" : ""}`
       : `record ${firstBad} (${label(records[firstBad])}) content does NOT match its stored hash`,
   });
 
   // 2. Chain linkage: each previousHash equals the prior record's hash.
-  let chainOk = true, badLink = -1;
-  for (let i = 1; i < records.length; i++) {
-    if (records[i].previousHash !== records[i - 1].hash) { chainOk = false; badLink = i; break; }
+  let chainOk = records.length > 0 && records[0].previousHash === null, badLink = chainOk ? -1 : 0;
+  for (let i = 1; chainOk && i < records.length; i++) {
+    if (records[i].previousHash !== records[i - 1].hash || records[i].sequenceNumber !== i) { chainOk = false; badLink = i; }
   }
   checks.push({
     name: "hash_chain_linkage",
@@ -52,26 +69,30 @@ export async function verifySession(sessionPath = SESSION_PATH) {
   // 3. The root stored in the file. Self-consistency only: whoever edits the
   //    records can rewrite this too.
   const hashes = records.map((r) => r.hash);
-  const recomputed = computeMerkleRoot(hashes);
+  const recomputed = merkleRoot(version, hashes);
   checks.push({
     name: "sealed_root_match",
     passed: recomputed === session.merkleRoot,
     detail: recomputed === session.merkleRoot
       ? "recomputed root matches the root stored in the file"
-      : `recomputed root ${recomputed.slice(0, 12)}... does NOT match the stored root ${String(session.merkleRoot).slice(0, 12)}...`,
+      : `recomputed root ${String(recomputed).slice(0, 12)}... does NOT match the stored root ${String(session.merkleRoot).slice(0, 12)}...`,
   });
 
-  checks.push(checkGatewaySignatures(data, hashes, recomputed));
+  checks.push(checkGatewaySignatures(data, version, hashes, recomputed));
   checks.push(checkServerReceipts(records));
   const anchorCheck = await checkAnchor(session.sessionId, recomputed, anchor);
   checks.push(anchorCheck);
 
-  const status = checks.some((c) => !c.passed && !c.unavailable) ? "tampered"
+  const failed = checks.filter((c) => !c.passed && !c.unavailable);
+  const status = failed.length ? "tampered"
     : checks.some((c) => c.unavailable) ? "unavailable"
     : checks.some((c) => c.independent) ? "verified"
     : "intact-unanchored";
+  const reason = status === "tampered" && failed.every((c) => c.notAnchored) ? "not-anchored" : null;
   return {
     status,
+    reason,
+    version,
     valid: status === "verified" || status === "intact-unanchored",
     independent: status === "verified",
     checks,
@@ -84,9 +105,9 @@ export async function verifySession(sessionPath = SESSION_PATH) {
 const label = (r) => r?.metadata?.tool || r?.actionType;
 
 // 4. Every record hash, every checkpoint, and the seal must carry a valid
-//    signature from the PINNED gateway key, and each checkpoint must match the
-//    Merkle root of the records it covers.
-function checkGatewaySignatures(data, hashes, recomputed) {
+//    signature from the PINNED gateway key, over the messages for the file's
+//    version, and each checkpoint must match the root of the records it covers.
+function checkGatewaySignatures(data, version, hashes, root) {
   const name = "gateway_signatures";
   const pinned = trustedPublicKey("gateway");
   if (!pinned) return { name, passed: false, detail: "no pinned gateway key (set GATEWAY_PUBLIC_KEY or data/keys/gateway.pub.pem)" };
@@ -104,21 +125,21 @@ function checkGatewaySignatures(data, hashes, recomputed) {
   }
   for (let i = 0; i < data.records.length; i++) {
     const r = data.records[i];
-    if (!verifySignature(pinned, messages.record(sid, r.sequenceNumber, r.hash), sigs[i])) {
+    if (!verifySignature(pinned, messages.record(version, sid, r.sequenceNumber, r.hash), sigs[i])) {
       return { name, passed: false, detail: `record ${i} (${label(r)}) is not signed by the gateway${keyNote}` };
     }
   }
   const cps = prov.checkpoints || [];
   for (const cp of cps) {
-    if (!verifySignature(pinned, messages.checkpoint(cp.kind, sid, cp.recordCount, cp.root), cp.signature)) {
+    if (!verifySignature(pinned, messages.checkpoint(version, cp.kind, sid, cp.recordCount, cp.root), cp.signature)) {
       return { name, passed: false, detail: `${cp.kind} at record ${cp.recordCount} is not signed by the gateway${keyNote}` };
     }
-    if (cp.recordCount > hashes.length || computeMerkleRoot(hashes.slice(0, cp.recordCount)) !== cp.root) {
+    if (cp.recordCount > hashes.length || merkleRoot(version, hashes.slice(0, cp.recordCount)) !== cp.root) {
       return { name, passed: false, detail: `the first ${cp.recordCount} records no longer match the ${cp.kind} signed at ${cp.signedAt}` };
     }
   }
   const seal = cps[cps.length - 1];
-  if (!seal || seal.kind !== "seal" || seal.recordCount !== hashes.length || seal.root !== recomputed) {
+  if (!seal || seal.kind !== "seal" || seal.recordCount !== hashes.length || seal.root !== root) {
     return { name, passed: false, detail: "no signed seal covering every record" };
   }
   return {
@@ -179,26 +200,28 @@ async function checkAnchor(sessionId, recomputed, fileAnchor) {
         onChain: { anchorer: a, root: on.root, anchoredAt: on.anchoredAt, backend },
         detail: ok
           ? `recomputed root matches the root anchored on ${where} by ${a.slice(0, 10)}... at ${when}`
-          : `recomputed root ${recomputed.slice(0, 12)}... does NOT match the root on ${where}: ${on.root.slice(0, 12)}... (anchored ${when})`,
+          : `recomputed root ${String(recomputed).slice(0, 12)}... does NOT match the root on ${where}: ${on.root.slice(0, 12)}... (anchored ${when})`,
       };
     }
-    return { name, passed: false, detail: `no anchor for session ${sessionId.slice(0, 8)} from a trusted anchorer on ${where}` };
+    return { name, passed: false, notAnchored: true, detail: `no anchor for session ${sessionId.slice(0, 8)} from a trusted anchorer on ${where}` };
   } catch (e) {
     return { name, passed: false, unavailable: true, detail: `could not read the anchor from ${where}: ${e.shortMessage || e.message}` };
   }
 }
 
 // CLI
+export const RESULT_TEXT = {
+  verified: "VERIFIED - intact, signed by the gateway, and matches the independent anchor.",
+  "intact-unanchored": "INTACT - internally consistent, but NOT checked against an independent anchor.",
+  tampered: "TAMPER DETECTED - the record no longer matches what was signed and anchored.",
+  "not-anchored": "NOT ANCHORED - the chain has no anchor for this session from a trusted anchorer. Not verified.",
+  unavailable: "COULD NOT VERIFY - the anchor source was unreachable. Nothing failed, but nothing independent was checked.",
+};
+
 if (process.argv[1] && process.argv[1].endsWith("verify.js")) {
   const r = await verifySession();
   console.log("\nVerifying session against its independent sources...\n");
   for (const c of r.checks) console.log(`  [${c.passed ? "ok " : c.unavailable ? "?? " : "XX "}] ${c.name}: ${c.detail}`);
-  const result = {
-    verified: "VERIFIED - intact, signed by the gateway, and matches the independent anchor.",
-    "intact-unanchored": "INTACT - internally consistent, but NOT checked against an independent anchor.",
-    tampered: "TAMPER DETECTED - the record no longer matches what was signed and anchored.",
-    unavailable: "COULD NOT VERIFY - the anchor source was unreachable. Nothing failed, but nothing independent was checked.",
-  }[r.status];
-  console.log("\n  RESULT: " + result);
+  console.log("\n  RESULT: " + RESULT_TEXT[r.reason || r.status]);
   process.exit(r.valid ? 0 : 1);
 }

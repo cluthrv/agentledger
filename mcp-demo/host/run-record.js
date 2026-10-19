@@ -33,7 +33,7 @@ if (anchorInfo) {
 console.log("\n------------------------------------------------------------");
 console.log("  session sealed");
 console.log("  records:     " + sealed.recordCount);
-console.log("  merkle root: " + sealed.merkleRoot);
+console.log("  anchor root: " + sealed.anchorRoot + "  (Merkle v2)");
 console.log("  verify:      " + (v.valid ? "VERIFIED" : "FAILED") + " - " + v.message);
 if (anchorInfo) console.log("  anchored:    " + anchorInfo.chain + " @ " + new Date(anchorInfo.anchoredAt * 1000).toISOString());
 console.log("  saved:       " + SESSION_PATH);

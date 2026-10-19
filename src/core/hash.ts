@@ -6,6 +6,7 @@
  */
 
 import { createHash } from 'crypto';
+import { canonicalJson } from './canonical';
 
 /**
  * Compute SHA-256 hash of an arbitrary string.
@@ -52,6 +53,47 @@ export function hashActionRecord(fields: {
   ]);
 
   return sha256(canonical);
+}
+
+/** Domain tag prefixed to the canonical record before hashing (v2). */
+export const RECORD_HASH_V2_TAG = 'agentledger/record-hash/v2\n';
+
+/**
+ * Compute the v2 hash of an Action Record.
+ *
+ * sha256("agentledger/record-hash/v2\n" + canonicalJson(content)), where
+ * content holds every content field and canonicalJson sorts keys at every
+ * depth (RFC 8785). Unlike v1, nested values such as a tool call's arguments
+ * are covered. agentId, reasoning and metadata are omitted when null or
+ * undefined; previousHash is always present (null for the first record).
+ */
+export function hashActionRecordV2(fields: {
+  id: string;
+  sessionId: string;
+  sequenceNumber: number;
+  timestamp: string;
+  agentId?: string | null;
+  actionType: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  reasoning?: string | null;
+  metadata?: Record<string, unknown> | null;
+  previousHash: string | null;
+}): string {
+  const content = {
+    id: fields.id,
+    sessionId: fields.sessionId,
+    sequenceNumber: fields.sequenceNumber,
+    timestamp: fields.timestamp,
+    agentId: fields.agentId ?? undefined,
+    actionType: fields.actionType,
+    input: fields.input,
+    output: fields.output,
+    reasoning: fields.reasoning ?? undefined,
+    metadata: fields.metadata ?? undefined,
+    previousHash: fields.previousHash ?? null,
+  };
+  return sha256(RECORD_HASH_V2_TAG + canonicalJson(content));
 }
 
 /**

@@ -18,6 +18,7 @@ Use the tools to gather the account, the credit score, the exposure and policy l
 State a clear recommendation, APPROVE or DECLINE, with your reasons, before acting.
 If the policy result says an exception requires approval, call request_approval before creating anything.
 Only call create_credit_line if you have an approval decision of APPROVED. Pass the approvalId to it.
+Before every tool call, say in one short sentence what you are about to do and why.
 Be concise. Do the work with tools; do not ask the user questions.`;
 
 // runAgent can take an injected anthropic client (for testing) and an onEvent

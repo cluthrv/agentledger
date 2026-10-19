@@ -4,16 +4,20 @@
 // becomes a hashed, chained receipt on the ledger session. The agent uses this
 // wrapped host exactly like the raw one, so it never decides whether to record.
 //
-// The gateway also signs: every record hash (so a receipt proves who recorded
-// it), a checkpoint of the running Merkle root every CHECKPOINT_EVERY records
-// (so a long or crashed session still has signed commitments), and the final
-// seal. Each tools/call result goes back with its receipt in _meta.
+// The gateway also signs: every record (so a receipt proves who recorded it),
+// a checkpoint of the running Merkle root every CHECKPOINT_EVERY records (so a
+// long or crashed session still has signed commitments), and the final seal.
+// Each tools/call result goes back with its receipt in _meta.
+//
+// Sessions are hashed with v2: canonical JSON over every field, nested ones
+// such as tool arguments included, and an RFC 6962 style Merkle tree. The v1
+// record hash skipped nested keys.
 // ---------------------------------------------------------------------------
 import fs from "node:fs";
 import path from "node:path";
-import { computeMerkleRoot } from "@vluthra/agent-ledger";
 import { ActionType, TRUST } from "./ledger.js";
 import { loadSigningKey, messages, RECEIPT_META_KEY, SERVER_RECEIPT_META_KEY } from "./keys.js";
+import { merkleRoot } from "./hashing.js";
 
 export function withLedger(host, session, {
   signer = loadSigningKey("gateway"),
@@ -22,6 +26,8 @@ export function withLedger(host, session, {
   const owner = {};
   for (const t of host.allTools) owner[t.name] = t.server;
 
+  const VERSION = "v2";
+  if (session.getHashVersion() !== VERSION) throw new Error("the gateway records v2 sessions only");
   const sessionId = session.getSessionId();
   const recordSignatures = [];
   const checkpoints = [];
@@ -30,9 +36,9 @@ export function withLedger(host, session, {
 
   function checkpoint(kind) {
     const hashes = session.getRecords().map((r) => r.hash);
-    const root = computeMerkleRoot(hashes);
+    const root = merkleRoot(VERSION, hashes);
     const cp = { kind, recordCount: hashes.length, root, signedAt: new Date().toISOString() };
-    cp.signature = signer.sign(messages.checkpoint(kind, sessionId, cp.recordCount, root));
+    cp.signature = signer.sign(messages.checkpoint(VERSION, kind, sessionId, cp.recordCount, root));
     checkpoints.push(cp);
     fs.mkdirSync(path.dirname(checkpointLog), { recursive: true });
     fs.appendFileSync(checkpointLog, JSON.stringify(cp) + "\n");
@@ -41,7 +47,7 @@ export function withLedger(host, session, {
 
   function recordAndSign(input) {
     const rec = session.record(input);
-    const signature = signer.sign(messages.record(sessionId, rec.sequenceNumber, rec.hash));
+    const signature = signer.sign(messages.record(VERSION, sessionId, rec.sequenceNumber, rec.hash));
     recordSignatures.push(signature);
     if (checkpointEvery > 0 && (rec.sequenceNumber + 1) % checkpointEvery === 0) checkpoint("checkpoint");
     return { rec, signature };
@@ -78,18 +84,21 @@ export function withLedger(host, session, {
       recordAndSign({ actionType: ActionType.DECISION, input: {}, output: {}, reasoning: text });
     },
 
-    // Seal the session and sign the final root.
+    // Seal the session and sign the final root: the Merkle v2 root that gets anchored.
     seal() {
       const sealed = session.seal();
-      checkpoint("seal");
-      return sealed;
+      const cp = checkpoint("seal");
+      return { ...sealed, anchorRoot: cp.root };
     },
 
     // The session export plus the gateway's signatures.
     exportSession() {
       return {
+        canonicalization: VERSION,
+        merkle: VERSION,
         ...session.export(),
         provenance: {
+          version: 2,
           gateway: { keyId: signer.keyId, publicKey: signer.publicKey },
           recordSignatures: [...recordSignatures],
           checkpoints: [...checkpoints],
