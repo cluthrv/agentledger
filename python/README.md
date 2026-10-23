@@ -6,9 +6,13 @@ This is the Python SDK for AgentLedger. It is a faithful port of the TypeScript 
 
 ## Install
 
+A PyPI release is coming; until then, install from GitHub.
+
 ```bash
-pip install agent-ledger
+pip install "git+https://github.com/cluthrv/agentledger.git#subdirectory=python"
 ```
+
+(The `agent-ledger` name on PyPI belongs to a different project.)
 
 Zero runtime dependencies. Python 3.9+.
 

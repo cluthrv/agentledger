@@ -10,7 +10,7 @@ This repository contains the TypeScript library, its Python port, an independent
 
 | Implementation              | Location                     | Install                                                            |
 | --------------------------- | ---------------------------- | ------------------------------------------------------------------ |
-| **TypeScript core library** | `src/` (this README)         | `npm install @vluthra/agent-ledger`                                |
+| **TypeScript core library** | `src/` (this README)         | `npm install @vluthra/agent-ledger` (0.1.x); 0.2.0 from source, see [Installation](#installation) |
 | **Python SDK**              | [`python/`](python/)         | See [python/README.md](python/README.md) (PyPI publish pending)     |
 | **Salesforce / Agentforce** | [`salesforce/`](salesforce/) | Unlocked package, see [salesforce/README.md](salesforce/README.md) |
 | **MCP gateway demo**        | [`mcp-demo/`](mcp-demo/)     | See [mcp-demo/README.md](mcp-demo/README.md)                       |
@@ -44,6 +44,28 @@ AgentLedger verifies the integrity of the records submitted to it. Being precise
 
 ```bash
 npm install @vluthra/agent-ledger
+```
+
+npm currently has 0.1.x, which uses v1 hashing (before nested fields such as tool arguments were covered). 0.2.0, with v2 hashing, is on GitHub only for now. To use it from source:
+
+```bash
+git clone https://github.com/cluthrv/agentledger.git
+cd agentledger
+npm install
+npm run build
+```
+
+Then point your project at the build, either with `npm link`:
+
+```bash
+npm link                                  # in the agentledger folder
+npm link @vluthra/agent-ledger            # in your project
+```
+
+or with a `file:` dependency in your project's `package.json`, as the MCP demo does:
+
+```json
+"dependencies": { "@vluthra/agent-ledger": "file:../agentledger" }
 ```
 
 ## Quick start
@@ -132,7 +154,7 @@ The demo's verifier reads the anchored root from the chain itself, keyed by sess
 
 ### Hashing versions (v2)
 
-Version 0.2.0 adds v2 hashing. A v2 record hash is SHA-256 over canonical JSON (RFC 8785) of every field, so nested values such as a tool call's arguments are covered; the v1 hash skipped nested keys. v2 also uses an RFC 6962 style Merkle tree (domain-separated leaves and nodes, odd node carried up). v1 stays the default for `AgentLedgerSession` so existing sessions keep verifying; opt in with `new AgentLedgerSession({ agentId, canonicalization: 'v2' })`. The MCP demo records every new session with v2 and writes `"canonicalization": "v2"` and `"merkle": "v2"` into the session file. The exact hashing, signing and anchoring rules are in [SIGNING.md](SIGNING.md).
+Version 0.2.0 adds v2 hashing. It is on GitHub only for now; npm has 0.1.x (see [Installation](#installation)). A v2 record hash is SHA-256 over canonical JSON (RFC 8785) of every field, so nested values such as a tool call's arguments are covered; the v1 hash skipped nested keys. v2 also uses an RFC 6962 style Merkle tree (domain-separated leaves and nodes, odd node carried up). v1 stays the default for `AgentLedgerSession` so existing sessions keep verifying; opt in with `new AgentLedgerSession({ agentId, canonicalization: 'v2' })`. The MCP demo records every new session with v2 and writes `"canonicalization": "v2"` and `"merkle": "v2"` into the session file. The exact hashing, signing and anchoring rules are in [SIGNING.md](SIGNING.md).
 
 ## API reference
 
