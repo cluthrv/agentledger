@@ -1,0 +1,76 @@
+{
+  "session": {
+    "sessionId": "1771b5b9-4d79-4995-8f18-7290472f4ef1",
+    "agentId": "credit-agent",
+    "startTime": "2026-10-30T22:24:19.183Z",
+    "endTime": "2026-10-30T22:24:19.198Z",
+    "recordCount": 3,
+    "merkleRoot": "6f3a3fbaf42a54b13be613af7d0c6283a6caa2d1872c005ccc35b9e68ffc8ff2",
+    "status": "sealed",
+    "platform": "xlang",
+    "canonicalization": "v2",
+    "merkle": "v2"
+  },
+  "records": [
+    {
+      "id": "d310e35b-3176-4adc-980d-12677ef672fc",
+      "sessionId": "1771b5b9-4d79-4995-8f18-7290472f4ef1",
+      "sequenceNumber": 0,
+      "timestamp": "2026-10-30T22:24:19.193Z",
+      "agentId": "credit-agent",
+      "actionType": "decision",
+      "input": {},
+      "output": {},
+      "reasoning": "Recommend DECLINE. Score 580 < 650.",
+      "hash": "b16f0ebf4e24ecfe9ecb43d56df4f0a4bd1dccd7d6baf0e587c12807ee64d75c",
+      "previousHash": null
+    },
+    {
+      "id": "239d8bca-1709-45c1-ba88-93cfbf642a1e",
+      "sessionId": "1771b5b9-4d79-4995-8f18-7290472f4ef1",
+      "sequenceNumber": 1,
+      "timestamp": "2026-10-30T22:24:19.197Z",
+      "agentId": "credit-agent",
+      "actionType": "tool_call",
+      "input": {
+        "tool": "create_credit_line",
+        "args": {
+          "customerId": "MER-100",
+          "amount": 2400000,
+          "approvalId": "APR-9382"
+        }
+      },
+      "output": {
+        "creditLineId": "CL-5678",
+        "status": "active",
+        "at": "2026-10-30T12:00:00.000Z"
+      },
+      "metadata": {
+        "tool": "create_credit_line",
+        "serverReceipt": {
+          "argsHash": "aa",
+          "signature": "sig"
+        }
+      },
+      "hash": "21b27ca4e133ac9638005c0d0fbb58082a06682c0c8ebdc111535fd6be7c234a",
+      "previousHash": "b16f0ebf4e24ecfe9ecb43d56df4f0a4bd1dccd7d6baf0e587c12807ee64d75c"
+    },
+    {
+      "id": "e18a5c87-b4ce-4608-9e99-47a1b24a89f9",
+      "sessionId": "1771b5b9-4d79-4995-8f18-7290472f4ef1",
+      "sequenceNumber": 2,
+      "timestamp": "2026-10-30T22:24:19.197Z",
+      "actionType": "query",
+      "input": {
+        "q": "café — ü 😀"
+      },
+      "output": {
+        "rate": 0.3333333333333333,
+        "big": 1e+21,
+        "small": 1e-7
+      },
+      "hash": "2723f3eb969b2e2951c9b40e5fb2da9832e4c04bfea7d17c5fdb391e6957ec02",
+      "previousHash": "21b27ca4e133ac9638005c0d0fbb58082a06682c0c8ebdc111535fd6be7c234a"
+    }
+  ]
+}

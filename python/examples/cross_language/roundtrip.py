@@ -1,12 +1,12 @@
 """
 Python -> JSON producer for the cross-language round-trip.
 
-Seals a session in Python (with float edge cases) and writes it to
-``python_session.json``. Then run ``verify.js`` with the published npm package
+Seals a v2 session in Python (with float edge cases and nested tool arguments)
+and writes it to ``python_session.json``. Then run ``verify.js`` with the published npm package
 to confirm the TypeScript library verifies Python's output:
 
     PYTHONPATH=../../src python roundtrip.py
-    npm install @vluthra/agent-ledger
+    npm install @vluthra/agent-ledger@0.2.0
     node verify.js
 
 For the reverse direction, seal a session with the TypeScript library, export
@@ -22,7 +22,9 @@ OUT = os.path.join(os.path.dirname(__file__), "python_session.json")
 
 
 def main() -> None:
-    s = AgentLedgerSession(agent_id="pricing-agent", initiator="xlang", platform="mcp")
+    s = AgentLedgerSession(
+        agent_id="pricing-agent", initiator="xlang", platform="mcp", canonicalization="v2"
+    )
     s.record(
         action_type=ActionType.QUERY,
         input={"query": "dealer pricing", "args": {"sku": "SKU-1234", "qty": 200}},

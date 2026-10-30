@@ -68,7 +68,7 @@ changing the record hash. Flat fields are fully covered.
 The Python SDK **reproduces this behavior** so v1 hashes match across
 languages and existing anchored roots keep verifying.
 
-### v2 fix (implemented in 0.2.0: on npm; the Python SDK is on GitHub, not yet on PyPI)
+### v2 fix (implemented in 0.2.0, on npm and PyPI)
 
 v2 canonicalization serializes with recursive key sorting (RFC 8785), so all
 nested content is covered, in both TypeScript (`hashActionRecordV2`,

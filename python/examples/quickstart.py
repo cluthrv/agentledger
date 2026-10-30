@@ -8,7 +8,7 @@ from agentledger import AgentLedgerSession, ActionType
 
 
 def main() -> None:
-    session = AgentLedgerSession(agent_id="sales-ops-agent", platform="mcp")
+    session = AgentLedgerSession(agent_id="sales-ops-agent", platform="mcp", canonicalization="v2")
 
     session.record(
         action_type=ActionType.TOOL_CALL,

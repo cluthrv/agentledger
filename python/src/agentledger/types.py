@@ -122,9 +122,12 @@ class AuditSession:
     initiator: Optional[str] = None
     platform: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    #: "v2" for sessions hashed with v2; None (absent from the dict) means v1.
+    canonicalization: Optional[str] = None
+    merkle: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d: Dict[str, Any] = {
             "sessionId": self.session_id,
             "agentId": self.agent_id,
             "startTime": self.start_time,
@@ -136,6 +139,11 @@ class AuditSession:
             "platform": self.platform,
             "metadata": self.metadata,
         }
+        if self.canonicalization is not None:
+            d["canonicalization"] = self.canonicalization
+        if self.merkle is not None:
+            d["merkle"] = self.merkle
+        return d
 
 
 @dataclass

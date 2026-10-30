@@ -14,7 +14,9 @@ anchored root from the chain itself (the AnchorRegistry contract in
 comes from your configuration, not from the document.
 
 A document says how it was hashed: ``"canonicalization": "v2"`` and
-``"merkle": "v2"`` for sessions recorded with v2 (record hashes over canonical
+``"merkle": "v2"``, inside ``session`` (as ``export()`` in either library writes
+them) or at the top level (as the MCP demo writes them), for sessions recorded
+with v2 (record hashes over canonical
 JSON of every nested field; RFC 6962 style Merkle tree), both absent for v1.
 v1 documents verify as before; their record hashes do not cover nested fields
 (see CANONICALIZATION.md and SIGNING.md).
@@ -30,7 +32,6 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from .hashing import hash_record_dict_v2
 from .merkle import compute_merkle_root, compute_merkle_root_v2
 from .recorder import verify_chain
 from .types import ActionRecord, VerificationCheck, VerificationResult
@@ -41,22 +42,22 @@ def load_records(doc: Dict[str, Any]) -> List[ActionRecord]:
     return [ActionRecord.from_dict(r) for r in doc.get("records", [])]
 
 
-def _versions(doc: Dict[str, Any]) -> Tuple[str, str]:
-    return doc.get("canonicalization", "v1"), doc.get("merkle", "v1")
+def _declared(inner: Optional[str], outer: Optional[str]) -> Optional[str]:
+    """One declared version from the session summary and the top level.
+
+    Absent in both means v1; different values in the two places mean None.
+    """
+    if inner and outer and inner != outer:
+        return None
+    return inner or outer or "v1"
 
 
-def _verify_chain_v2(raw_records: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
-    """v2 counterpart of ``verify_chain``: hashes, linkage and sequence numbers."""
-    errors: List[str] = []
-    for i, r in enumerate(raw_records):
-        if r.get("sequenceNumber") != i:
-            errors.append(f"Record {i}: sequenceNumber is {r.get('sequenceNumber')}, expected {i}")
-        if hash_record_dict_v2(r) != r.get("hash"):
-            errors.append(f"Record {i} ({r.get('id')}): v2 hash verification failed, content may have been tampered with")
-        expected_prev = raw_records[i - 1].get("hash") if i > 0 else None
-        if r.get("previousHash") != expected_prev:
-            errors.append(f"Record {i} ({r.get('id')}): previousHash does not match, chain is broken")
-    return not errors, errors
+def _versions(doc: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    session = doc.get("session") or {}
+    return (
+        _declared(session.get("canonicalization"), doc.get("canonicalization")),
+        _declared(session.get("merkle"), doc.get("merkle")),
+    )
 
 
 # First 4 bytes of keccak256("anchors(address,bytes32)"), the public getter on
@@ -152,32 +153,56 @@ def verify_exported_session(
     """
     Verify an exported session document.
 
-    Runs the same three checks as ``AgentLedgerSession.verify`` against the
-    stored records, plus, when an ``anchor`` block is present, a check that the
-    recomputed Merkle root matches the root cached in that block (the
-    0x-prefixed on-chain value is normalized before comparison).
+    Runs the same checks as ``verifyExportedSession`` in the TypeScript
+    library: ``hash_version``, ``hash_chain_integrity``, ``session_consistency``
+    and, when the session was sealed, ``merkle_root_integrity``. When an
+    ``anchor`` block is present it also checks that the recomputed Merkle root
+    matches the root cached in that block (the 0x-prefixed on-chain value is
+    normalized before comparison).
 
     The cached block is not independent of the records. Pass ``onchain`` to add
     ``anchored_root_onchain``, which reads the root from the chain itself.
     """
-    records = load_records(doc)
-    raw_records = doc.get("records", [])
-    checks: List[VerificationCheck] = []
-    canonicalization, merkle = _versions(doc)
-
-    if canonicalization not in ("v1", "v2") or merkle != canonicalization:
-        checks.append(
-            VerificationCheck(
-                name="hash_version",
-                passed=False,
-                detail=f"Unsupported or mixed versions: canonicalization {canonicalization}, merkle {merkle}",
-            )
+    session = doc.get("session") if isinstance(doc, dict) else None
+    raw_records = doc.get("records") if isinstance(doc, dict) else None
+    try:
+        if not isinstance(session, dict) or not isinstance(raw_records, list):
+            raise ValueError("expected { session, records }")
+        records = load_records(doc)
+    except (KeyError, TypeError, ValueError, AttributeError) as e:
+        return VerificationResult(
+            valid=False,
+            message="Not an exported session: expected { session, records }.",
+            checks=[VerificationCheck("document_shape", False, f"{type(e).__name__}: {e}")],
         )
-        v2 = False
-    else:
-        v2 = canonicalization == "v2"
 
-    valid, errors = _verify_chain_v2(raw_records) if v2 else verify_chain(records)
+    checks: List[VerificationCheck] = []
+    session_id = session.get("sessionId", "?")
+
+    # 1. Hashing version, declared consistently.
+    canonicalization, merkle = _versions(doc)
+    version_ok = canonicalization in ("v1", "v2") and merkle == canonicalization
+    checks.append(
+        VerificationCheck(
+            name="hash_version",
+            passed=version_ok,
+            detail=(
+                (
+                    "v2: record hashes cover every field, nested ones included"
+                    if canonicalization == "v2"
+                    else "v1: nested fields such as tool arguments are not covered by the record hash"
+                )
+                if version_ok
+                else f"Unsupported or conflicting versions: canonicalization "
+                f"{canonicalization or 'conflicting'}, merkle {merkle or 'conflicting'}"
+            ),
+        )
+    )
+    version = "v2" if canonicalization == "v2" else "v1"
+    v2 = version == "v2"
+
+    # 2. Record hashes and chain linkage.
+    valid, errors = verify_chain(records, version)
     checks.append(
         VerificationCheck(
             name="hash_chain_integrity",
@@ -190,23 +215,43 @@ def verify_exported_session(
         )
     )
 
-    stored_root: Optional[str] = (doc.get("session") or {}).get("merkleRoot")
-    hashes = [r.get("hash") for r in raw_records]
-    recomputed_root = compute_merkle_root_v2(hashes) if v2 else compute_merkle_root(hashes)
-    anchor_root = recomputed_root
-    root_ok = stored_root is not None and recomputed_root == stored_root
+    # 3. The records belong to this session, and all of them are present.
+    foreign = next((i for i, r in enumerate(records) if r.session_id != session_id), None)
+    stated = session.get("recordCount")
+    count_ok = len(records) > 0 and len(records) == stated
     checks.append(
         VerificationCheck(
-            name="merkle_root_integrity",
-            passed=root_ok,
+            name="session_consistency",
+            passed=foreign is None and count_ok,
             detail=(
-                f"Merkle root verified: {(recomputed_root or '')[:16]}..."
-                if root_ok
-                else f"Merkle root mismatch: stored {(stored_root or '')[:16]}... "
-                f"vs computed {(recomputed_root or '')[:16]}..."
+                f"record {foreign} belongs to session {records[foreign].session_id}, not {session_id}"
+                if foreign is not None
+                else f"{len(records)} record(s), as the session summary states"
+                if count_ok
+                else f"{len(records)} record(s), but the session summary states {stated}"
             ),
         )
     )
+
+    # 4. The Merkle root, when the session was sealed.
+    stored_root: Optional[str] = session.get("merkleRoot")
+    hashes = [r.hash for r in records]
+    recomputed_root = compute_merkle_root_v2(hashes) if v2 else compute_merkle_root(hashes)
+    anchor_root = recomputed_root
+    if stored_root:
+        root_ok = recomputed_root == stored_root
+        checks.append(
+            VerificationCheck(
+                name="merkle_root_integrity",
+                passed=root_ok,
+                detail=(
+                    f"Merkle root verified: {stored_root[:16]}..."
+                    if root_ok
+                    else f"Merkle root mismatch: stored {stored_root[:16]}... "
+                    f"vs computed {(recomputed_root or '')[:16]}..."
+                ),
+            )
+        )
 
     anchor = doc.get("anchor")
     if anchor and anchor.get("root"):
@@ -226,11 +271,9 @@ def verify_exported_session(
         )
 
     if onchain is not None:
-        session_id = (doc.get("session") or {}).get("sessionId", "")
-        checks.append(_check_onchain(onchain, session_id, anchor_root))
+        checks.append(_check_onchain(onchain, session.get("sessionId", ""), anchor_root))
 
     all_passed = all(c.passed for c in checks)
-    session_id = (doc.get("session") or {}).get("sessionId", "?")
     return VerificationResult(
         valid=all_passed,
         message=(
