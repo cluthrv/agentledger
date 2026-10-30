@@ -11,7 +11,7 @@ This repository contains the TypeScript library, its Python port, an independent
 | Implementation              | Location                     | Install                                                            |
 | --------------------------- | ---------------------------- | ------------------------------------------------------------------ |
 | **TypeScript core library** | `src/` (this README)         | `npm install @vluthra/agent-ledger`                                |
-| **Python SDK**              | [`python/`](python/)         | See [python/README.md](python/README.md) (PyPI publish pending)     |
+| **Python SDK**              | [`python/`](python/)         | `pip install vluthra-agent-ledger` (import `agentledger`)         |
 | **Salesforce / Agentforce** | [`salesforce/`](salesforce/) | Unlocked package, see [salesforce/README.md](salesforce/README.md) |
 | **MCP gateway demo**        | [`mcp-demo/`](mcp-demo/)     | See [mcp-demo/README.md](mcp-demo/README.md)                       |
 
@@ -290,7 +290,7 @@ npm run build
 - [x] Salesforce-native implementation (see [`salesforce/`](salesforce/))
 - [x] MCP gateway demo with boundary capture across multiple servers (see [`mcp-demo/`](mcp-demo/))
 - [x] External anchoring of the sealed fingerprint to an independent ledger (demonstrated in `mcp-demo/`, anchored to Arbitrum Sepolia)
-- [x] Python SDK (see [`python/`](python/); PyPI publish pending)
+- [x] Python SDK on PyPI: [`vluthra-agent-ledger`](https://pypi.org/project/vluthra-agent-ledger/) (see [`python/`](python/))
 - [ ] REST verification API with OpenAPI spec
 - [ ] Storage adapters (PostgreSQL, DynamoDB)
 - [ ] CLI tool for offline verification
