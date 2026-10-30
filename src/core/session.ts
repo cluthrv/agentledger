@@ -79,7 +79,7 @@ export class AgentLedgerSession {
    * to the previous record. The session must be active (not sealed).
    *
    * @param input - The action details to record
-   * @returns The created Action Record
+   * @returns A copy of the created Action Record
    * @throws Error if the session has been sealed
    */
   record(input: ActionRecordInput): ActionRecord {
@@ -102,7 +102,7 @@ export class AgentLedgerSession {
     );
 
     this.records.push(record);
-    return record;
+    return structuredClone(record);
   }
 
   /**
@@ -239,15 +239,16 @@ export class AgentLedgerSession {
    * Get a specific Action Record by index.
    */
   getRecord(index: number): ActionRecord | undefined {
-    return this.records[index];
+    const record = this.records[index];
+    return record && structuredClone(record);
   }
 
   /**
    * Get all Action Records in the session.
-   * Returns a copy to prevent external mutation.
+   * Returns deep copies: changing them does not change the session.
    */
   getRecords(): ActionRecord[] {
-    return [...this.records];
+    return this.records.map((r) => structuredClone(r));
   }
 
   /**

@@ -14,7 +14,8 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint src --ext .ts",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run build && npm test",
+    "test:package": "npm run build && node test/package.mjs"
   },
   "keywords": [
     "ai-agent",

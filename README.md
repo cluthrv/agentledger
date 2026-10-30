@@ -174,19 +174,40 @@ new AgentLedgerSession(options: SessionOptions)
 | `initiator` | `string`                  | No       | Who or what started this session          |
 | `platform`  | `string`                  | No       | Platform identifier (e.g. `'salesforce'`) |
 | `metadata`  | `Record<string, unknown>` | No       | Arbitrary session-level metadata          |
+| `canonicalization` | `'v1' \| 'v2'`    | No       | Hashing version (default `'v1'`; see [Hashing versions](#hashing-versions-v2)) |
 
 #### Methods
 
 | Method               | Returns                     | Description                            |
 | -------------------- | --------------------------- | -------------------------------------- |
-| `record(input)`      | `ActionRecord`              | Record an agent action and chain it    |
+| `record(input)`      | `ActionRecord`              | Record an agent action and chain it (returns a copy) |
 | `seal()`             | `AuditSession`              | Seal the session with a Merkle root    |
 | `verify()`           | `VerificationResult`        | Verify chain and Merkle root integrity |
 | `proveRecord(index)` | `MerkleProof \| null`       | Generate a Merkle proof for one record |
 | `verifyProof(proof)` | `boolean`                   | Verify a Merkle proof                  |
-| `getRecord(index)`   | `ActionRecord \| undefined` | Get a specific record                  |
-| `getRecords()`       | `ActionRecord[]`            | Get all records (copy)                 |
+| `getRecord(index)`   | `ActionRecord \| undefined` | Get a specific record (copy)           |
+| `getRecords()`       | `ActionRecord[]`            | Get all records (copies)               |
 | `export()`           | `{ session, records }`      | Export complete session data           |
+
+`record()` copies `input`, `output` and `metadata` and reduces them to plain JSON, the way `JSON.stringify` would: a `Date` becomes its ISO string, `undefined` members are dropped, and `toJSON()` is honored. The record therefore holds exactly what a saved file will hold, and changing your own objects after recording doesn't change it. Records the session returns are copies too. Under v2, `NaN`, `Infinity`, `BigInt` and circular references are rejected with an error naming where they occur.
+
+### Verifying a saved session
+
+Sessions are usually saved and checked later, often by someone else. `verifyExportedSession` checks a document produced by `session.export()` on its own:
+
+```typescript
+import fs from "node:fs";
+import { verifyExportedSession } from "@vluthra/agent-ledger";
+
+// When the run ends
+fs.writeFileSync("session.json", JSON.stringify(session.export()));
+
+// Later, anywhere
+const result = verifyExportedSession(JSON.parse(fs.readFileSync("session.json", "utf8")));
+console.log(result.valid ? "VERIFIED" : "FAILED", result.checks);
+```
+
+It reads the hashing version from the document and checks record hashes, chain linkage, that every record belongs to the session and none is missing, and the Merkle root. It checks the document against itself. Proof that the document is the original needs an external anchor and signatures, as the [MCP demo](mcp-demo/) shows.
 
 ### Action types
 
@@ -220,6 +241,13 @@ import {
   computeMerkleRoot,
   generateMerkleProof,
   verifyMerkleProof,
+  // v2
+  canonicalJson,
+  toJSONValue,
+  hashActionRecordV2,
+  computeMerkleRootV2,
+  generateMerkleProofV2,
+  verifyMerkleProofV2,
 } from "@vluthra/agent-ledger";
 ```
 
@@ -249,6 +277,9 @@ npm test
 
 # Run tests with coverage
 npm run test:coverage
+
+# Install the packed library into a fresh project and use it as an app would
+npm run test:package
 
 # Build
 npm run build

@@ -37,6 +37,7 @@ still verify; `python/CANONICALIZATION.md` has the v1 serialization details.
 `canonicalJson` (`src/core/canonical.ts`, `python/src/agentledger/canonical.py`)
 follows RFC 8785 (JSON Canonicalization Scheme):
 
+- Values are first reduced to plain JSON as `JSON.stringify` reduces them: `toJSON()` is honored (a `Date` becomes its ISO string), and members that are `undefined`, functions or symbols are dropped (in arrays they become `null`). Circular references and `BigInt` are rejected. A record holds this reduced form, so what is hashed is exactly what a saved session file contains.
 - Object keys sorted by UTF-16 code units, at every depth.
 - Object members whose value is `undefined` are dropped (JavaScript). `null` is kept.
 - Numbers as ECMAScript `Number.prototype.toString` writes them: `2400000`,

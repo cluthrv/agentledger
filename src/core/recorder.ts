@@ -9,6 +9,7 @@
 import { randomUUID } from 'crypto';
 import { ActionRecord, ActionRecordInput, HashVersion } from '../types';
 import { hashActionRecord, hashActionRecordV2 } from './hash';
+import { toJSONValue } from './canonical';
 
 /** The record-hash function for a canonicalization version. */
 export function recordHasher(version: HashVersion = 'v1'): typeof hashActionRecordV2 {
@@ -25,6 +26,12 @@ export function recordHasher(version: HashVersion = 'v1'): typeof hashActionReco
  * @param previousHash - Hash of the previous record (null for first)
  * @param version - Record-hash canonicalization (default 'v1')
  * @returns A complete, immutable Action Record with computed hash
+ *
+ * input, output and metadata are copied and reduced to plain JSON first (see
+ * toJSONValue): the record shares no objects with the caller, so later changes
+ * to the caller's objects cannot alter it, and the record holds exactly what a
+ * saved session file will hold (a Date becomes its ISO string). Under v2, NaN
+ * and Infinity are rejected; under v1 they become null, as they always did.
  */
 export function createActionRecord(
   sessionId: string,
@@ -35,6 +42,12 @@ export function createActionRecord(
 ): ActionRecord {
   const id = randomUUID();
   const timestamp = new Date().toISOString();
+  const strictNumbers = version === 'v2';
+  const content = {
+    input: toJSONValue(input.input, { strictNumbers }) as Record<string, unknown>,
+    output: toJSONValue(input.output, { strictNumbers }) as Record<string, unknown>,
+    metadata: toJSONValue(input.metadata, { strictNumbers }) as Record<string, unknown> | undefined,
+  };
 
   const hash = recordHasher(version)({
     id,
@@ -43,10 +56,10 @@ export function createActionRecord(
     timestamp,
     agentId: input.agentId,
     actionType: input.actionType,
-    input: input.input,
-    output: input.output,
+    input: content.input,
+    output: content.output,
     reasoning: input.reasoning,
-    metadata: input.metadata,
+    metadata: content.metadata,
     previousHash,
   });
 
@@ -57,10 +70,10 @@ export function createActionRecord(
     timestamp,
     agentId: input.agentId,
     actionType: input.actionType,
-    input: input.input,
-    output: input.output,
+    input: content.input,
+    output: content.output,
     reasoning: input.reasoning,
-    metadata: input.metadata,
+    metadata: content.metadata,
     hash,
     previousHash,
   };

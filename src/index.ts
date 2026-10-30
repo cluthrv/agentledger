@@ -45,7 +45,8 @@ export {
 
 // Low-level utilities (for advanced usage)
 export { sha256, hashActionRecord, hashActionRecordV2, RECORD_HASH_V2_TAG, combineHashes } from './core/hash';
-export { canonicalJson } from './core/canonical';
+export { canonicalJson, toJSONValue, ToJSONValueOptions } from './core/canonical';
+export { verifyExportedSession, ExportedSession } from './core/verify';
 export { createActionRecord, verifyActionRecord, verifyChain, recordHasher } from './core/recorder';
 export {
   buildMerkleTree,

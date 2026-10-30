@@ -9,6 +9,7 @@ import {
   verifyMerkleProofV2,
 } from '../core/merkle';
 import { AgentLedgerSession } from '../core/session';
+import { verifyExportedSession } from '../core/verify';
 import { ActionType } from '../types';
 
 const record = () => ({
@@ -162,9 +163,10 @@ describe('AgentLedgerSession with canonicalization v2', () => {
   });
 
   it('detects a nested argument edit under v2', () => {
-    const session = run('v2');
-    (session.getRecord(1)!.input.args as Record<string, unknown>).amount = 240000;
-    const result = session.verify();
+    const saved = JSON.parse(JSON.stringify(run('v2').export()));
+    expect(verifyExportedSession(saved).valid).toBe(true);
+    saved.records[1].input.args.amount = 240000;
+    const result = verifyExportedSession(saved);
     expect(result.valid).toBe(false);
     expect(result.checks.find((c) => c.name === 'hash_chain_integrity')!.passed).toBe(false);
   });
@@ -175,8 +177,9 @@ describe('AgentLedgerSession with canonicalization v2', () => {
     expect(session.getHashVersion()).toBe('v1');
     expect(exp.session.canonicalization).toBeUndefined();
     expect(exp.session.merkleRoot).toBe(computeMerkleRoot(exp.records.map((r) => r.hash)));
-    (session.getRecord(1)!.input.args as Record<string, unknown>).amount = 240000;
-    expect(session.verify().valid).toBe(true); // the documented v1 limitation
+    const saved = JSON.parse(JSON.stringify(exp));
+    saved.records[1].input.args.amount = 240000;
+    expect(verifyExportedSession(saved).valid).toBe(true); // the documented v1 limitation
   });
 
   it('generates and verifies v2 proofs', () => {
