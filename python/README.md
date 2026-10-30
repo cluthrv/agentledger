@@ -12,7 +12,7 @@ pip install vluthra-agent-ledger
 
 The import name is `agentledger`. (The `agent-ledger` name on PyPI belongs to a different project; this package's name matches the npm package `@vluthra/agent-ledger`.)
 
-Zero runtime dependencies. Python 3.9+.
+Zero runtime dependencies. Python 3.10+.
 
 To use the latest code from GitHub instead:
 
