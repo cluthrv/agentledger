@@ -61,7 +61,9 @@ export function withLedger(host, session, {
     const { rec, signature } = recordAndSign({
       actionType: ActionType.TOOL_CALL,
       input: { tool: name, args },
-      output: JSON.parse(raw.content[0].text),
+      // The signed result is structuredContent (docs/extensions/receipts);
+      // servers without it return their JSON as the first text block.
+      output: raw.structuredContent ?? JSON.parse(raw.content[0].text),
       metadata: { tool: name, system: server, trustDomain: TRUST[server] || "unknown", ...(serverReceipt && { serverReceipt }) },
     });
     const receipt = { sessionId, seq: rec.sequenceNumber, hash: rec.hash, previousHash: rec.previousHash, keyId: signer.keyId, signature };
@@ -75,7 +77,8 @@ export function withLedger(host, session, {
 
     // Same signature the agent already calls.
     async call(name, args) {
-      return JSON.parse((await callTool(name, args)).content[0].text);
+      const result = await callTool(name, args);
+      return result.structuredContent ?? JSON.parse(result.content[0].text);
     },
 
     // The agent's declared reasoning, captured by the harness (not by the model

@@ -153,3 +153,8 @@ Receipts travel in the `_meta` of a `tools/call` result:
 The prefix is a dotted label sequence, the reverse-DNS form of
 `cluthrv.github.io`, a domain the project controls, which keeps the keys from
 colliding with anyone else's `_meta` keys.
+
+The receipts are specified as a third-party MCP extension,
+`io.github.cluthrv/receipts`, in
+[docs/extensions/receipts](docs/extensions/receipts/README.md), with test
+vectors and an independent checker.

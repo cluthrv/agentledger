@@ -150,7 +150,7 @@ The root hash is a single fingerprint for the entire session. A Merkle proof all
 
 The core library produces the sealed Merkle root. The MCP demo takes the next step: it anchors that root to an independent, externally controlled location so the fingerprint cannot be silently rewritten along with the records. The demo anchors to Arbitrum Sepolia, a public test network, and only the 32-byte Merkle root leaves the boundary. The underlying records and recorded rationale stay inside. Anchoring is pluggable: a transparency log or a trusted timestamping service can serve the same purpose. See [`mcp-demo/`](mcp-demo/).
 
-The demo's verifier reads the anchored root from the chain itself, keyed by session id and a pinned gateway address, rather than trusting the copy cached in the session file. The gateway also signs every receipt (Ed25519), signs a checkpoint of the running root every few records, and returns each receipt to the caller in the MCP result's `_meta`. One demo server (the credit bureau) signs its own results, so a record carries evidence from both sides of the `tools/call`.
+The demo's verifier reads the anchored root from the chain itself, keyed by session id and a pinned gateway address, rather than trusting the copy cached in the session file. The gateway also signs every receipt (Ed25519), signs a checkpoint of the running root every few records, and returns each receipt to the caller in the MCP result's `_meta`. One demo server (the credit bureau) signs its own results, so a record carries evidence from both sides of the `tools/call`. The receipt format is specified as a third-party MCP extension, [`io.github.cluthrv/receipts`](docs/extensions/receipts/README.md), with test vectors and an independent checker.
 
 ### Hashing versions (v2)
 
@@ -291,6 +291,7 @@ npm run build
 - [x] MCP gateway demo with boundary capture across multiple servers (see [`mcp-demo/`](mcp-demo/))
 - [x] External anchoring of the sealed fingerprint to an independent ledger (demonstrated in `mcp-demo/`, anchored to Arbitrum Sepolia)
 - [x] Python SDK on PyPI: [`vluthra-agent-ledger`](https://pypi.org/project/vluthra-agent-ledger/) (see [`python/`](python/))
+- [x] Signed tool-call receipts specified as an MCP extension (see [`docs/extensions/receipts/`](docs/extensions/receipts/README.md))
 - [ ] REST verification API with OpenAPI spec
 - [ ] Storage adapters (PostgreSQL, DynamoDB)
 - [ ] CLI tool for offline verification

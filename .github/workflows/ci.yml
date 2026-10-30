@@ -23,6 +23,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:package
+      - run: node docs/extensions/receipts/check-vectors.mjs
 
   python:
     runs-on: ubuntu-latest
